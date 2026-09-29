@@ -1,4 +1,4 @@
-# Finance RAG Assistant — 企业财务知识库 RAG 系统 + 流程型 Agent
+# Finance RAG Agent — 企业财务知识库 RAG 系统 + 流程型 Agent
 
 基于 LangChain 的企业级 RAG 知识库系统：覆盖文档解析 → 差异化切分 → 向量化 → 语义检索 → 本地精排 → LLM 生成的完整链路，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。在问答能力之上，进一步实现 **流程型 Agent**（Tool Calling + 人工确认门），系统可办理"查标准 → 预检 → 建单"业务全流程。
 
