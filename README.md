@@ -5,7 +5,7 @@
 ## 核心特性
 
 | 模块 | 说明 |
-|---|---|
+| --- | --- |
 | RAG 全链路 | 多编码自适应文档解析（UTF-8/GBK 等 5 种编码自动探测）；表格/文本双模式差异化切分（250/80 与 300/50，由评估实验选型）；DashScope Embedding 向量化；Chroma 持久化存储 |
 | 检索增强 | 语义召回 Top-15 → 本地 BGE-reranker-v2-m3 交叉编码精排 Top-5（毫秒级、零 API 成本、数据不出内网） |
 | **流程型 Agent** | 基于 Tool Calling 的报销流程办理：查标准 → 超标预检 → 汇总确认 → 建单；标准数据存于业务标准库（对应数仓维表层，规则零硬编码）；写操作设**代码层人工确认门**；附 Gradio 可视化演示 |
@@ -19,29 +19,38 @@
 
 ```mermaid
 flowchart LR
-    A[knowledge/*.txt<br/>多编码文档] --> B[文档解析<br/>编码自动探测]
-    B --> C[差异化切分<br/>表格250/文本300]
-    C --> D[DashScope Embedding<br/>text-embedding-v2]
-    D --> E[(Chroma<br/>持久化向量库<br/>+ access_level 标签)]
-    Q[用户提问] --> G[guard.py<br/>输入净化]
-    G --> R[语义检索 Top-15<br/>+ 角色权限过滤]
-    E --> R
-    R --> N[BGE-reranker-v2-m3<br/>本地精排 Top-5]
-    N --> P[Prompt 模板<br/>指令与数据分离]
-    P --> L[通义千问 API<br/>11 模型自动降级]
-    L --> V[输出护栏]
-    V --> O[回答]
+    subgraph RAG["知识问答链路"]
+        A[knowledge/*.txt<br/>多编码文档] --> B[文档解析<br/>编码自动探测]
+        B --> C[差异化切分<br/>表格250/文本300]
+        C --> D[DashScope Embedding]
+        D --> E[(Chroma 向量库<br/>+ access_level 标签)]
+        Q[用户提问] --> G[guard.py 输入净化]
+        G --> R[语义检索 Top-15<br/>+ 角色权限过滤]
+        E --> R
+        R --> N[BGE-reranker 本地精排 Top-5]
+        N --> P[Prompt 模板]
+        P --> L[通义千问 API<br/>11 模型自动降级]
+        L --> V[输出护栏]
+        V --> O[回答]
+    end
+    subgraph AGT["流程办理链路（Agent）"]
+        U[报销指令<br/>如：北京出差4天] --> LOOP["Agent 循环<br/>function calling<br/>自主决策工具序列"]
+        DB[(biz_rules.db<br/>业务标准库<br/>对应数仓维表层)]
+        LOOP -->|查标准 / 超标预检| DB
+        LOOP -->|写操作前| GATE{"人工确认门<br/>代码层强制"}
+        GATE -->|用户确认| ORD["生成工单<br/>+ 审批链规则<br/>（超5天加签财务BP）"]
+        LOOP --> AUD2[JSONL 审计]
+    end
     R --> AUD[audit.py<br/>JSONL 审计日志]
     L --> AUD
-    Q --> RL[滑动窗口限流<br/>20次/60s]
 ```
 
 ## 快速开始
 
 ```bash
 # 1. 克隆并安装依赖
-git clone https://github.com/<你的用户名>/finance-rag-assistant.git
-cd finance-rag-assistant
+git clone https://github.com/qinkunda/finance-rag-agent.git
+cd finance-rag-agent
 pip install -r requirements.txt
 
 # 2. 配置密钥（Windows 用 copy）
@@ -70,7 +79,7 @@ docker run -it --rm -v $(pwd)/models:/app/models finance-rag
 
 系统已从"知识问答"升级为"可办理业务"的 Agent。核心设计：**规则不在代码里，在业务标准库里**——与数仓"指标口径管理"同一治理逻辑，标准变更零发版。
 
-```
+```javascript
 用户指令: "帮我报销深圳出差3天，住宿一晚550"
    │
    ▼
@@ -96,7 +105,7 @@ Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
 ## 权限模型演示
 
 | 角色 | 可访问级别 | 示例 |
-|---|---|---|
+| --- | --- | --- |
 | employee | public | 差旅制度、报销流程 |
 | manager | public + internal | 月度成本执行表 |
 | admin | 全部 | 报销单据台账（含姓名、金额） |
@@ -108,7 +117,7 @@ Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
 固定检索链路不变，仅切换生成模型策略，20 条评估集（含 4 条拒答型）：
 
 | 生成策略 | 忠实度 | 答案相关度 | 检索精度 | 检索召回 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 思考模型（v1） | 0.9639 ¹ | 0.4956 | 0.8585 | 0.8500 |
 | 非思考小模型（v2） | 0.8488 | 0.5111 | 0.8669 | 0.9000 |
 | **关思考旗舰（最终选型）** | **0.8594** | **0.5546** | **0.8756** | **0.9250** |
@@ -142,7 +151,7 @@ python evaluate.py
 
 ## 目录结构
 
-```
+```javascript
 .
 ├── main.py               # RAG 主链路 + 权限过滤 + 限流 + 降级
 ├── agent_main.py         # 流程型 Agent 主循环（Tool Calling + 人工确认门）
