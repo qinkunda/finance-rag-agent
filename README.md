@@ -1,6 +1,6 @@
-# Finance RAG Assistant — 企业财务知识库 RAG 系统
+# Finance RAG Assistant — 企业财务知识库 RAG 系统 + 流程型 Agent
 
-基于 LangChain 的企业级 RAG 知识库问答系统：覆盖文档解析 → 差异化切分 → 向量化 → 语义检索 → 本地精排 → LLM 生成的完整链路，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。
+基于 LangChain 的企业级 RAG 知识库系统：覆盖文档解析 → 差异化切分 → 向量化 → 语义检索 → 本地精排 → LLM 生成的完整链路，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。在问答能力之上，进一步实现 **流程型 Agent**（Tool Calling + 人工确认门），系统可办理"查标准 → 预检 → 建单"业务全流程。
 
 ## 核心特性
 
@@ -8,6 +8,7 @@
 |---|---|
 | RAG 全链路 | 多编码自适应文档解析（UTF-8/GBK 等 5 种编码自动探测）；表格/文本双模式差异化切分（250/80 与 300/50，由评估实验选型）；DashScope Embedding 向量化；Chroma 持久化存储 |
 | 检索增强 | 语义召回 Top-15 → 本地 BGE-reranker-v2-m3 交叉编码精排 Top-5（毫秒级、零 API 成本、数据不出内网） |
+| **流程型 Agent** | 基于 Tool Calling 的报销流程办理：查标准 → 超标预检 → 汇总确认 → 建单；标准数据存于业务标准库（对应数仓维表层，规则零硬编码）；写操作设**代码层人工确认门**；附 Gradio 可视化演示 |
 | 模型服务治理 | 通义千问百炼 API 配置化接入；11 个候选模型自动降级链，启动探测、403/429 秒切，额度耗尽服务不断 |
 | 权限隔离 | 文档级三级权限（public / internal / confidential），向量库 Metadata 过滤实现**检索级**权限控制；未知角色默认降级（fail-closed） |
 | 安全护栏 | 加固 System Prompt + 输入净化（防注入）+ 输出敏感词过滤；滑动窗口限流（20 次/60 秒） |
@@ -49,8 +50,13 @@ cp .env.example .env        # 填入你的 DASHSCOPE_API_KEY
 # 3. 下载 Reranker 模型到 models/ 目录（ModelScope 或 HuggingFace）
 #    models/BAAI--bge-reranker-v2-m3/snapshots/master/...
 
-# 4. 运行（首次启动自动构建知识库，之后从本地加载）
+# 4. 运行 RAG 问答（首次启动自动构建知识库，之后从本地加载）
 python main.py
+
+# 5. 运行流程型 Agent（标准库初始化 + Web 演示界面）
+python init_rules_db.py
+pip install gradio
+python agent_ui.py
 ```
 
 Docker 方式：
@@ -59,6 +65,33 @@ Docker 方式：
 docker build -t finance-rag .
 docker run -it --rm -v $(pwd)/models:/app/models finance-rag
 ```
+
+## 流程型 Agent 能力（Tool Calling）
+
+系统已从"知识问答"升级为"可办理业务"的 Agent。核心设计：**规则不在代码里，在业务标准库里**——与数仓"指标口径管理"同一治理逻辑，标准变更零发版。
+
+```
+用户指令: "帮我报销深圳出差3天，住宿一晚550"
+   │
+   ▼
+[工具] get_travel_standard(深圳, 普通员工)  → 一类城市，住宿上限 500 元/晚
+[工具] overlimit_check(550 vs 500)          → 超标 50 元/晚，超支部分个人承担
+   │
+   ▼
+Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
+   │
+   ▼ 用户回复"确认"
+[工具] create_expense_report → 工单 BX-AGENT-深圳-3D，审批链：直属上级 → 部门负责人
+```
+
+- **工具层**：`get_travel_standard` / `overlimit_check` / `create_expense_report`，数据全部查询企业标准库 `biz_rules.db`
+- **决策层**：千问 function calling，模型自主决策工具调用序列
+- **治理层**：写操作前**代码层强制人工确认**（不依赖模型自觉）；全链路 JSONL 审计
+- **界面层**：Gradio 演示页——左侧对话、右侧实时展示 Agent 的每次工具调用与返回
+
+**演示剧本**：① 正常报销（北京 4 天）② 超标拦截（深圳 550/晚）③ 审批链规则（跨市 6 天自动加签财务 BP）
+
+**工程说明**：`init_rules_db.py` 模拟"业务系统 → 标准层"的同步环节（生产环境由 CDC/DataX 从 OA/财务系统同步）；标准值摘自《差旅费用管理办法》第三/六/七/十/十四条。
 
 ## 权限模型演示
 
@@ -112,6 +145,10 @@ python evaluate.py
 ```
 .
 ├── main.py               # RAG 主链路 + 权限过滤 + 限流 + 降级
+├── agent_main.py         # 流程型 Agent 主循环（Tool Calling + 人工确认门）
+├── agent_tools.py        # Agent 工具层（查标准/预检/建单）
+├── agent_ui.py           # Gradio 演示界面
+├── init_rules_db.py      # 业务标准库初始化（模拟源系统→标准层同步）
 ├── evaluate.py           # RAGAS 四维评估（并发查询 + 自动降级）
 ├── eval_dataset.py       # 20 条分层评估集（事实/综合/拒答）
 ├── config.py             # 配置加载（.env + 模型路径）
