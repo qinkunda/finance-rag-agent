@@ -10,3 +10,6 @@ logs/
 
 
 biz_rules.db
+
+triples.json
+kg.html

@@ -1,6 +1,6 @@
-# Finance RAG Agent — 企业财务知识库 RAG 系统 + 流程型 Agent
+# Finance RAG Agent — 企业财务知识库 RAG 系统 + 流程型 Agent + 知识图谱
 
-基于 LangChain 的企业级 RAG 知识库系统：覆盖文档解析 → 差异化切分 → 向量化 → 语义检索 → 本地精排 → LLM 生成的完整链路，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。在问答能力之上，进一步实现 **流程型 Agent**（Tool Calling + 人工确认门），系统可办理"查标准 → 预检 → 建单"业务全流程。
+基于 LangChain 的企业级数据智能系统：**RAG 知识问答**（文档解析→差异化切分→向量化→语义检索→本地精排→LLM 生成）、**流程型 Agent**（Tool Calling + 人工确认门）、**知识图谱**（LLM 三元组抽取 + 交互可视化）三大能力，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。
 
 ## 核心特性
 
@@ -9,6 +9,7 @@
 | RAG 全链路 | 多编码自适应文档解析（UTF-8/GBK 等 5 种编码自动探测）；表格/文本双模式差异化切分（250/80 与 300/50，由评估实验选型）；DashScope Embedding 向量化；Chroma 持久化存储 |
 | 检索增强 | 语义召回 Top-15 → 本地 BGE-reranker-v2-m3 交叉编码精排 Top-5（毫秒级、零 API 成本、数据不出内网） |
 | **流程型 Agent** | 基于 Tool Calling 的报销流程办理：查标准 → 超标预检 → 汇总确认 → 建单；标准数据存于业务标准库（对应数仓维表层，规则零硬编码）；写操作设**代码层人工确认门**；附 Gradio 可视化演示 |
+| **知识图谱** | LLM 按 schema 从制度文本抽取三元组建图（NetworkX + pyvis 交互可视化）；与 RAG 双引擎互补：非结构化知识走向量检索，结构化关系（职级-标准-城市分级）走图谱链路查询 |
 | 模型服务治理 | 通义千问百炼 API 配置化接入；11 个候选模型自动降级链，启动探测、403/429 秒切，额度耗尽服务不断 |
 | 权限隔离 | 文档级三级权限（public / internal / confidential），向量库 Metadata 过滤实现**检索级**权限控制；未知角色默认降级（fail-closed） |
 | 安全护栏 | 加固 System Prompt + 输入净化（防注入）+ 输出敏感词过滤；滑动窗口限流（20 次/60 秒） |
@@ -41,6 +42,12 @@ flowchart LR
         GATE -->|用户确认| ORD["生成工单<br/>+ 审批链规则<br/>（超5天加签财务BP）"]
         LOOP --> AUD2[JSONL 审计]
     end
+    subgraph KG["知识图谱模块"]
+        DOC2[制度文本] --> EXT["kg_extract.py<br/>LLM 三元组抽取<br/>schema 约束 JSON 输出"]
+        EXT --> TJ[/triples.json/]
+        TJ --> BL["build_kg.py<br/>NetworkX 有向图<br/>pyvis 交互可视化"]
+        BL --> HTML[kg.html<br/>可拖拽网状图]
+    end
     R --> AUD[audit.py<br/>JSONL 审计日志]
     L --> AUD
 ```
@@ -66,13 +73,10 @@ python main.py
 python init_rules_db.py
 pip install gradio
 python agent_ui.py
-```
 
-Docker 方式：
-
-```bash
-docker build -t finance-rag .
-docker run -it --rm -v $(pwd)/models:/app/models finance-rag
+# 6. 构建知识图谱（LLM 抽取三元组 → 交互式网状图）
+python kg_extract.py        # 产出 triples.json
+python build_kg.py          # 产出 kg.html，双击打开
 ```
 
 ## 流程型 Agent 能力（Tool Calling）
@@ -101,6 +105,19 @@ Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
 **演示剧本**：① 正常报销（北京 4 天）② 超标拦截（深圳 550/晚）③ 审批链规则（跨市 6 天自动加签财务 BP）
 
 **工程说明**：`init_rules_db.py` 模拟"业务系统 → 标准层"的同步环节（生产环境由 CDC/DataX 从 OA/财务系统同步）；标准值摘自《差旅费用管理办法》第三/六/七/十/十四条。
+
+## 知识图谱模块（最小实现）
+
+制度文本 → **LLM 三元组抽取**（千问，schema 约束 JSON 输出）→ NetworkX 有向图 → **pyvis 交互可视化**（`kg.html`，可拖拽缩放，点开节点看关系）。
+
+与 RAG 构成**双引擎**，同一问题两种解法：
+
+| 问题："普通员工在深圳住宿标准多少" | RAG（向量检索） | 知识图谱（链路查询） |
+| --- | --- | --- |
+| 方式 | 语义召回相关段落 → LLM 阅读理解 | `普通员工—住宿标准→一类城市←属于—深圳`，确定性一跳链查 |
+| 适用 | 非结构化知识、开放式问答 | 结构化关系、精确查表、可解释推理 |
+
+**设计说明**：三元组 schema 与 Neo4j 兼容，生产化迁移为配置级改动；图谱构建与 RAG 共用模型降级链基础设施。
 
 ## 权限模型演示
 
@@ -139,7 +156,7 @@ Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
 
 ```bash
 # 精确锁定当前环境依赖（推荐提交 lock 文件）
-pip freeze | findstr /I "langchain openai chromadb sentence-transformers ragas datasets dotenv numpy pandas" > requirements.lock.txt
+pip freeze | findstr /I "langchain openai chromadb sentence-transformers ragas datasets dotenv numpy pandas networkx pyvis" > requirements.lock.txt
 
 # 依赖漏洞扫描
 pip install pip-audit
@@ -158,6 +175,8 @@ python evaluate.py
 ├── agent_tools.py        # Agent 工具层（查标准/预检/建单）
 ├── agent_ui.py           # Gradio 演示界面
 ├── init_rules_db.py      # 业务标准库初始化（模拟源系统→标准层同步）
+├── kg_extract.py         # 知识图谱：LLM 三元组抽取（千问，schema 约束）
+├── build_kg.py           # 知识图谱：NetworkX 建图 + pyvis 可视化
 ├── evaluate.py           # RAGAS 四维评估（并发查询 + 自动降级）
 ├── eval_dataset.py       # 20 条分层评估集（事实/综合/拒答）
 ├── config.py             # 配置加载（.env + 模型路径）
