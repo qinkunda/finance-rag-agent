@@ -7,3 +7,5 @@ __pycache__/
 *.pyc
 rag_eval_report.xlsx
 eval_results.csv
+data/output/
+.git/

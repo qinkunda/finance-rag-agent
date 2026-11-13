@@ -1,0 +1,14 @@
+[
+  {
+    "request_id": "BR-001",
+    "project_id": "LOG-2026",
+    "amount": "50000.00",
+    "reason": "合成运输设备采购"
+  },
+  {
+    "request_id": "BR-002",
+    "project_id": "LOG-2026",
+    "amount": "90000.00",
+    "reason": "合成超预算采购"
+  }
+]

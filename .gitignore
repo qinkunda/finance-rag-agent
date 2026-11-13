@@ -13,3 +13,6 @@ biz_rules.db
 
 triples.json
 kg.html
+data/output/
+.pytest_cache/
+.coverage

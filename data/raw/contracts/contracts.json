@@ -1,0 +1,40 @@
+[
+  {
+    "contract_id": "HT-2026-001",
+    "vendor_id": "V-001",
+    "total_amount": "100000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  }
+]

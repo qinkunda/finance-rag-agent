@@ -1,12 +1,17 @@
 from sentence_transformers import SentenceTransformer
 import os
+from pathlib import Path
+
+BASE = Path(__file__).resolve().parent
 
 # 1. 设置镜像源（防止它手滑又要去下载）
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
-# 2. 指向你电脑里真正的模型路径！
-# 注意：我帮你把名字改成了 large，并且指向了它最里面的 master 文件夹
-local_model_path = r"C:\Users\39034\Desktop\AI_Project\RAG_Demo\models\BAAI--bge-large-zh-v1.5\snapshots\master"
+# 优先读环境变量，默认使用当前项目 models/ 下的本地模型。
+local_model_path = os.getenv(
+    "EMBEDDING_MODEL_PATH",
+    str(BASE / "models/BAAI--bge-large-zh-v1.5/snapshots/master"),
+)
 
 print("正在加载本地的 bge-large 模型，请稍候...")
 

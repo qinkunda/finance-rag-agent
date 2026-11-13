@@ -20,3 +20,9 @@ datasets>=2.20
 
 # 演示界面（运行 agent_ui.py 需要）
 gradio>=4.0
+
+# 多场景知识工程与 API
+pypdf>=4,<8
+fastapi>=0.110,<1
+uvicorn>=0.27,<1
+httpx>=0.27,<1

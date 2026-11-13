@@ -1,0 +1,32 @@
+[
+  {
+    "request_id": "PR-001",
+    "contract_id": "HT-2026-001",
+    "milestone": "advance",
+    "amount": "30000.00",
+    "invoice": true,
+    "acceptance": false,
+    "warranty_expired": false,
+    "account_matches_vendor": true
+  },
+  {
+    "request_id": "PR-002",
+    "contract_id": "HT-2026-001",
+    "milestone": "delivery",
+    "amount": "60000.00",
+    "invoice": true,
+    "acceptance": false,
+    "warranty_expired": false,
+    "account_matches_vendor": true
+  },
+  {
+    "request_id": "PR-003",
+    "contract_id": "HT-2026-001",
+    "milestone": "advance",
+    "amount": "70000.00",
+    "invoice": true,
+    "acceptance": false,
+    "warranty_expired": false,
+    "account_matches_vendor": true
+  }
+]

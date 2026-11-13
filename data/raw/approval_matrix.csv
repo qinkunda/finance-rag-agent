@@ -1,0 +1,5 @@
+﻿scenario,condition,approvers
+payment,amount<=50000,部门负责人
+payment,amount>50000,部门负责人|财务负责人
+budget,within_available,部门负责人|财务BP
+budget,exceeds_available,预算调整流程

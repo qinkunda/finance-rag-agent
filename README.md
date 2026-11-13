@@ -1,12 +1,16 @@
-# Finance RAG Agent — 企业财务知识库 RAG 系统 + 流程型 Agent + 知识图谱
+# Finance RAG Agent — 企业财务知识工程、多场景 Agent 与 MCP 演示
 
-基于 LangChain 的企业级数据智能系统：**RAG 知识问答**（文档解析→差异化切分→向量化→语义检索→本地精排→LLM 生成）、**流程型 Agent**（Tool Calling + 人工确认门）、**知识图谱**（LLM 三元组抽取 + 交互可视化）三大能力，**安全内建**（三级权限隔离、限流、审计、Prompt 护栏），配套 **RAGAS 四维评估体系**与三轮生成模型对照实验。
+基于 LangChain 的企业财务数据智能演示：**RAG 知识问答**（文档解析→差异化切分→向量化→语义检索→本地精排→LLM 生成）、**流程型 Agent**（Tool Calling + 人工确认门）、**知识图谱**（LLM 三元组抽取 + 交互可视化），并新增**合同付款、预算、银行与总账对账**场景、可审计知识工程管线、确定性 Supervisor、多专业 Agent、FastAPI 与 MCP 工具层。全部新增业务数据均为合成数据，不连接真实企业付款或记账系统。
 
 ## 核心特性
 
 | 模块 | 说明 |
 | --- | --- |
 | RAG 全链路 | 多编码自适应文档解析（UTF-8/GBK 等 5 种编码自动探测）；表格/文本双模式差异化切分（250/80 与 300/50，由评估实验选型）；DashScope Embedding 向量化；Chroma 持久化存储 |
+| **知识工程管线** | `catalog.json` 显式登记来源与权限；PDF/TXT 解析 → 清洗 → 条款切分 → 自动标签 → Chunk/ Manifest/ SHA-256 血缘；当前合成语料 9 份文档、66 个 Chunk |
+| **多场景规则引擎** | 合同里程碑付款预检、可用预算计算与调整预检、银行流水与总账对账；金额使用 `Decimal`，不让大模型负责确定性计算 |
+| **多 Agent 最小编排** | Supervisor 确定性路由至 Policy / Payment / Budget / Reconciliation Agent，统一返回 `answer + data + trace`；当前不是 LLM 自主协同框架 |
+| **MCP 工具层** | stdio FastMCP Server 暴露 6 个工具；只读查询与本地合成工单写操作分离，写操作必须 `confirmed=true`，默认仅开放 employee/manager 通道 |
 | 检索增强 | 语义召回 Top-15 → 本地 BGE-reranker-v2-m3 交叉编码精排 Top-5（毫秒级、零 API 成本、数据不出内网） |
 | **流程型 Agent** | 基于 Tool Calling 的报销流程办理：查标准 → 超标预检 → 汇总确认 → 建单；标准数据存于业务标准库（对应数仓维表层，规则零硬编码）；写操作设**代码层人工确认门**；附 Gradio 可视化演示 |
 | **知识图谱** | LLM 按 schema 从制度文本抽取三元组建图（NetworkX + pyvis 交互可视化）；与 RAG 双引擎互补：非结构化知识走向量检索，结构化关系（职级-标准-城市分级）走图谱链路查询 |
@@ -52,7 +56,76 @@ flowchart LR
     L --> AUD
 ```
 
-## 快速开始
+## 多场景扩展：先跑通离线演示
+
+无需 API Key、向量模型或 GPU，即可验证新增的知识工程和业务规则链路：
+
+```text
+合成 PDF/TXT + 合同/申请/预算/流水
+              │
+              ▼
+catalog 登记 → 解析 → 清洗 → 条款切分/标签 → curated chunks + manifest 血缘
+              │
+              ▼
+Supervisor ──► PolicyAgent（条款检索与引用）
+              ├─► PaymentAgent（合同、发票、验收、账户、里程碑金额）
+              ├─► BudgetAgent（年度预算 - 已承诺 - 已发生 - 本次申请）
+              └─► ReconciliationAgent（匹配、金额差异、缺失、未达、重复）
+```
+
+### 1. 安装并启动 API
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+export FINANCE_OFFLINE_DEMO=true   # Windows PowerShell: $env:FINANCE_OFFLINE_DEMO="true"
+uvicorn api:app --host 127.0.0.1 --port 8000
+```
+
+接口契约：
+
+| 接口 | 用途 |
+| --- | --- |
+| `GET /health` | 健康检查与离线模式状态 |
+| `POST /ask` | 原知识问答契约；离线模式走本地条款检索，非离线模式延迟加载原 RAG 链路 |
+| `POST /agent` | 多场景统一入口，接收 `question`、`user_role` |
+| `POST /agent/execute` | 指定场景和结构化 payload 执行，适合工作流或工具调用 |
+
+```bash
+curl -X POST http://127.0.0.1:8000/agent \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"请预检付款申请 PR-002","user_role":"employee"}'
+
+curl -X POST http://127.0.0.1:8000/agent \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"检查预算申请 BR-002","user_role":"manager"}'
+```
+
+可复现案例：`PR-001` 通过；`PR-002` 缺验收单；`PR-003` 里程碑金额不符；`BR-001` 通过；`BR-002` 超可用预算 20000 元；对账样本识别金额差异、总账缺失、银行未达和重复流水。规则预检不代表真实审批通过。
+
+### 2. 重建语料与知识工程产物
+
+```bash
+# 重新生成合成 PDF 和配套结构化业务数据
+python scripts/generate_demo_corpus.py
+
+# 只处理 data/catalog.json 显式登记的文件，重建 parsed/cleaned/chunks/manifest
+python -c "from finance_platform.ingestion import build_corpus; print(build_corpus())"
+```
+
+字段包含 `document_id / scenario / version / effective_date / status / access_level / source_type / source_path / sha256`。真实企业文档接入前必须另行完成授权、分类分级、脱敏与来源登记，不得直接提交到本仓。
+
+### 3. MCP stdio 协议联调
+
+```bash
+pip install -r requirements-mcp.txt
+python mcp_server/test_mcp_client.py
+```
+
+Server 提供 `query_finance_policy`、`check_payment_request`、`check_budget_request`、`analyze_reconciliation`、`get_document_lineage`、`create_finance_ticket`。协议测试会真实启动 MCP 子进程，发现 6 个工具并逐一调用，校验查询结果、血缘和确认门。
+
+`create_finance_ticket` 是唯一写工具：未显式传入 `confirmed=true` 时只返回 `confirmation_required`；确认后也只写本地合成演示工单，不连接真实付款、记账或 OA 系统。MCP 审计不保存完整敏感 payload。
+
+## 完整 RAG、原报销 Agent 与知识图谱
 
 ```bash
 # 1. 克隆并安装依赖
@@ -155,6 +228,12 @@ Agent 汇总费用明细 + 审批链 → 【人工确认门】等待用户确认
 ## 开发指南
 
 ```bash
+# 离线单元测试：语料/PDF/血缘、权限、三个新场景、多 Agent、API、MCP 工具服务
+python -m unittest discover -s tests -v
+
+# 真实 MCP stdio 协议测试（先安装 requirements-mcp.txt）
+python mcp_server/test_mcp_client.py
+
 # 精确锁定当前环境依赖（推荐提交 lock 文件）
 pip freeze | findstr /I "langchain openai chromadb sentence-transformers ragas datasets dotenv numpy pandas networkx pyvis" > requirements.lock.txt
 
@@ -165,6 +244,15 @@ pip-audit -r requirements.txt
 # 运行评估（需先配置 .env）
 python evaluate.py
 ```
+
+## 验证状态与边界
+
+- 已通过：9 组离线单元测试；MCP 真实 stdio 协议下联调（6 个工具发现与 6 次调用）；新增 API 契约测试。
+- 原 RAGAS 数值、知识图谱和原报销 Agent 实验保留原记录；本次扩展没有重新跑这些外部模型实验，因此不新增或改写其指标。
+- 多 Agent 当前是**确定性 Supervisor 最小编排**，便于离线复现与审计，不宣称 LLM 自主规划或生产级多智能体协同。
+- Dify 多场景 DSL 位于配套仓，已通过静态结构校验，仍待实际 Dify 实例导入验收。
+- LoRA 配套仓新增的是种子数据与校验脚本，未纳入原训练集，未产生新训练结果。
+- 本项目是合成数据工程演示；角色入参不等于生产认证，真实落地需接入企业统一身份、授权、密钥管理和业务系统审批。
 
 ## 目录结构
 
@@ -183,10 +271,18 @@ python evaluate.py
 ├── guard.py              # Prompt 护栏：输入净化 + 输出过滤
 ├── audit.py              # JSONL 审计日志 + 查询计时
 ├── roles_config.py       # 角色-权限映射（fail-closed）
-├── knowledge/            # 演示语料（虚构公司，已脱敏）
-├── prompts/              # Prompt 模板外置
-├── models/               # 本地 Reranker 模型（不入库）
-└── requirements.txt
+├── api.py               # FastAPI：/health、/ask、/agent、/agent/execute
+├── finance_platform/    # 知识工程、离线检索、场景规则、多 Agent、MCP 工具服务
+├── mcp_server/          # FastMCP Server + 真实 stdio 协议测试
+├── scripts/             # 合成 PDF 与业务数据生成器
+├── tests/               # 离线自动化测试
+├── data/raw/            # 6 份新增合成 PDF + 合同/预算/流水等结构化数据
+├── data/curated/        # parsed、cleaned、chunks、manifest（含血缘）
+├── data/labels/         # 制度检索金标准问题
+├── knowledge/           # 原 3 份虚构公司演示语料
+├── prompts/             # Prompt 模板外置
+├── models/              # 本地 Reranker 模型（不入库）
+└── requirements*.txt
 ```
 
 ## License
