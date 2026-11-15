@@ -36,6 +36,30 @@
     "source_type": "synthetic"
   },
   {
+    "document_id": "POL-TRAVEL-2027-V3-0",
+    "path": "knowledge/knowledge差旅费用管理办法_v3.txt",
+    "title": "差旅费用管理办法",
+    "scenario": "travel",
+    "document_type": "policy",
+    "version": "3.0",
+    "effective_date": "2027-01-01",
+    "status": "pending",
+    "access_level": "public",
+    "source_type": "synthetic"
+  },
+  {
+    "document_id": "POL-PAYMENT-POLICY-2026-V0-9",
+    "path": "data/raw/policies/payment_policy_v0_9.pdf",
+    "title": "付款管理办法（旧版）",
+    "scenario": "payment",
+    "document_type": "policy",
+    "version": "0.9",
+    "effective_date": "2024-01-01",
+    "status": "archived",
+    "access_level": "public",
+    "source_type": "synthetic"
+  },
+  {
     "document_id": "POL-PAYMENT-POLICY-2026",
     "path": "data/raw/policies/payment_policy_v1_0.pdf",
     "title": "付款管理办法",
@@ -60,13 +84,37 @@
     "source_type": "synthetic"
   },
   {
+    "document_id": "POL-SUPPLIER-MASTER-POLICY-2026",
+    "path": "data/raw/policies/supplier_master_policy_v1_0.pdf",
+    "title": "供应商主数据与账户管理规范",
+    "scenario": "payment",
+    "document_type": "policy",
+    "version": "1.0",
+    "effective_date": "2026-02-01",
+    "status": "active",
+    "access_level": "public",
+    "source_type": "synthetic"
+  },
+  {
+    "document_id": "POL-BUDGET-POLICY-2026-V0-9",
+    "path": "data/raw/policies/budget_policy_v0_9.pdf",
+    "title": "预算管理办法（旧版）",
+    "scenario": "budget",
+    "document_type": "policy",
+    "version": "0.9",
+    "effective_date": "2024-01-01",
+    "status": "archived",
+    "access_level": "public",
+    "source_type": "synthetic"
+  },
+  {
     "document_id": "POL-BUDGET-POLICY-2026",
     "path": "data/raw/policies/budget_policy_v1_0.pdf",
     "title": "预算管理与调整办法",
     "scenario": "budget",
     "document_type": "policy",
     "version": "1.0",
-    "effective_date": "2026-01-01",
+    "effective_date": "2026-02-01",
     "status": "active",
     "access_level": "public",
     "source_type": "synthetic"
@@ -78,7 +126,7 @@
     "scenario": "reconciliation",
     "document_type": "policy",
     "version": "1.0",
-    "effective_date": "2026-01-01",
+    "effective_date": "2026-03-01",
     "status": "active",
     "access_level": "public",
     "source_type": "synthetic"
@@ -90,7 +138,7 @@
     "scenario": "invoice",
     "document_type": "policy",
     "version": "1.0",
-    "effective_date": "2026-01-01",
+    "effective_date": "2026-01-15",
     "status": "active",
     "access_level": "public",
     "source_type": "synthetic"
@@ -102,7 +150,19 @@
     "scenario": "workflow",
     "document_type": "policy",
     "version": "1.0",
-    "effective_date": "2026-01-01",
+    "effective_date": "2026-03-01",
+    "status": "active",
+    "access_level": "public",
+    "source_type": "synthetic"
+  },
+  {
+    "document_id": "POL-PAYMENT-EXCEPTION-WORKFLOW-2026",
+    "path": "data/raw/policies/payment_exception_workflow_v1_0.pdf",
+    "title": "付款异常复核与工单指引",
+    "scenario": "workflow",
+    "document_type": "policy",
+    "version": "1.0",
+    "effective_date": "2026-03-10",
     "status": "active",
     "access_level": "public",
     "source_type": "synthetic"

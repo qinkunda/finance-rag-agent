@@ -1,8 +1,86 @@
 [
   {
     "vendor_id": "V-001",
-    "vendor_name": "华南设备供应商（合成）",
+    "vendor_name": "合成供应商01",
     "account_fingerprint": "ACCT-DEMO-001",
-    "status": "active"
+    "status": "active",
+    "risk_level": "low"
+  },
+  {
+    "vendor_id": "V-002",
+    "vendor_name": "合成供应商02",
+    "account_fingerprint": "ACCT-DEMO-002",
+    "status": "active",
+    "risk_level": "low"
+  },
+  {
+    "vendor_id": "V-003",
+    "vendor_name": "合成供应商03",
+    "account_fingerprint": "ACCT-DEMO-003",
+    "status": "active",
+    "risk_level": "medium"
+  },
+  {
+    "vendor_id": "V-004",
+    "vendor_name": "合成供应商04",
+    "account_fingerprint": "ACCT-DEMO-004",
+    "status": "active",
+    "risk_level": "medium"
+  },
+  {
+    "vendor_id": "V-005",
+    "vendor_name": "合成供应商05",
+    "account_fingerprint": "ACCT-DEMO-005",
+    "status": "active",
+    "risk_level": "low"
+  },
+  {
+    "vendor_id": "V-006",
+    "vendor_name": "合成供应商06",
+    "account_fingerprint": "ACCT-DEMO-006",
+    "status": "active",
+    "risk_level": "high"
+  },
+  {
+    "vendor_id": "V-007",
+    "vendor_name": "合成供应商07",
+    "account_fingerprint": "ACCT-DEMO-007",
+    "status": "suspended",
+    "risk_level": "high"
+  },
+  {
+    "vendor_id": "V-008",
+    "vendor_name": "合成供应商08",
+    "account_fingerprint": "ACCT-DEMO-008",
+    "status": "active",
+    "risk_level": "low"
+  },
+  {
+    "vendor_id": "V-009",
+    "vendor_name": "星汉仓储设备（合成）",
+    "account_fingerprint": "ACCT-DEMO-009",
+    "status": "active",
+    "risk_level": "normal"
+  },
+  {
+    "vendor_id": "V-010",
+    "vendor_name": "远洲软件服务（合成）",
+    "account_fingerprint": "ACCT-DEMO-010",
+    "status": "active",
+    "risk_level": "normal"
+  },
+  {
+    "vendor_id": "V-011",
+    "vendor_name": "科盟检测服务（合成）",
+    "account_fingerprint": "ACCT-DEMO-011",
+    "status": "active",
+    "risk_level": "high"
+  },
+  {
+    "vendor_id": "V-012",
+    "vendor_name": "停用供应商（合成）",
+    "account_fingerprint": "ACCT-DEMO-012",
+    "status": "frozen",
+    "risk_level": "normal"
   }
 ]

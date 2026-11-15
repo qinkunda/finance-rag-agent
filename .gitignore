@@ -14,5 +14,8 @@ biz_rules.db
 triples.json
 kg.html
 data/output/
+data/finance_demo.db
+data/finance_demo.db-shm
+data/finance_demo.db-wal
 .pytest_cache/
 .coverage

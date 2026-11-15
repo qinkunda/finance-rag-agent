@@ -40,5 +40,33 @@
     "role": "employee",
     "expected_document": null,
     "should_refuse": true
+  },
+  {
+    "query_id": "Q-007",
+    "question": "供应商账户变更可以由助手直接修改吗？",
+    "role": "employee",
+    "expected_document": "POL-SUPPLIER-MASTER-POLICY-2026",
+    "should_refuse": false
+  },
+  {
+    "query_id": "Q-008",
+    "question": "付款异常确认后是否代表已经真实付款？",
+    "role": "employee",
+    "expected_document": "POL-PAYMENT-EXCEPTION-WORKFLOW-2026",
+    "should_refuse": false
+  },
+  {
+    "query_id": "Q-009",
+    "question": "预算口径是否包含冻结金额？",
+    "role": "employee",
+    "expected_document": "POL-BUDGET-POLICY-2026",
+    "should_refuse": false
+  },
+  {
+    "query_id": "Q-010",
+    "question": "总账外部参考号重复时能否直接合并？",
+    "role": "employee",
+    "expected_document": "POL-RECONCILIATION-POLICY-2026",
+    "should_refuse": false
   }
 ]

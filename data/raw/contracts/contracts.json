@@ -2,10 +2,464 @@
   {
     "contract_id": "HT-2026-001",
     "vendor_id": "V-001",
+    "project_id": "LOG-2026",
+    "title": "合成运输设备采购合同",
     "total_amount": "100000.00",
     "currency": "CNY",
     "approved": true,
     "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-002",
+    "vendor_id": "V-002",
+    "project_id": "IT-2026",
+    "title": "合成数据平台服务合同",
+    "total_amount": "240000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.20",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.70",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-003",
+    "vendor_id": "V-003",
+    "project_id": "HR-2026",
+    "title": "合成培训服务草稿合同",
+    "total_amount": "80000.00",
+    "currency": "CNY",
+    "approved": false,
+    "status": "draft",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-004",
+    "vendor_id": "V-004",
+    "project_id": "MFG-2026",
+    "title": "合成检测设备采购合同",
+    "total_amount": "150000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-005",
+    "vendor_id": "V-005",
+    "project_id": "LOG-2026",
+    "title": "合成仓储服务失效合同",
+    "total_amount": "200000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "expired",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-006",
+    "vendor_id": "V-006",
+    "project_id": "IT-2026",
+    "title": "合成模型平台建设合同",
+    "total_amount": "320000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-007",
+    "vendor_id": "V-007",
+    "project_id": "MKT-2026",
+    "title": "合成市场服务合同",
+    "total_amount": "90000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-008",
+    "vendor_id": "V-008",
+    "project_id": "RND-2026",
+    "title": "合成研发设备采购合同",
+    "total_amount": "120000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-01-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-009",
+    "vendor_id": "V-009",
+    "project_id": "LOG-2026",
+    "title": "仓储扫码设备采购合同（合成）",
+    "total_amount": "180000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-03-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-010",
+    "vendor_id": "V-010",
+    "project_id": "IT-2026",
+    "title": "数据平台运维服务合同（合成）",
+    "total_amount": "450000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-03-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-011",
+    "vendor_id": "V-009",
+    "project_id": "FIN-2026",
+    "title": "财务档案整理服务合同（合成）",
+    "total_amount": "60000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-03-15",
+    "milestones": [
+      {
+        "code": "advance",
+        "name": "预付款",
+        "ratio": "0.30",
+        "requires": [
+          "contract_approved",
+          "invoice"
+        ]
+      },
+      {
+        "code": "delivery",
+        "name": "到货款",
+        "ratio": "0.60",
+        "requires": [
+          "contract_approved",
+          "invoice",
+          "acceptance"
+        ]
+      },
+      {
+        "code": "warranty",
+        "name": "质保金",
+        "ratio": "0.10",
+        "requires": [
+          "contract_approved",
+          "warranty_expired"
+        ]
+      }
+    ]
+  },
+  {
+    "contract_id": "HT-2026-012",
+    "vendor_id": "V-011",
+    "project_id": "RND-2026",
+    "title": "研发环境检测服务合同（合成）",
+    "total_amount": "210000.00",
+    "currency": "CNY",
+    "approved": true,
+    "status": "active",
+    "signed_at": "2026-03-15",
     "milestones": [
       {
         "code": "advance",

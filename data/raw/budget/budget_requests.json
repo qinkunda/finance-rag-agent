@@ -3,12 +3,72 @@
     "request_id": "BR-001",
     "project_id": "LOG-2026",
     "amount": "50000.00",
-    "reason": "合成运输设备采购"
+    "reason": "合成运输设备采购",
+    "cost_type": "设备",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-01"
   },
   {
     "request_id": "BR-002",
     "project_id": "LOG-2026",
     "amount": "90000.00",
-    "reason": "合成超预算采购"
+    "reason": "合成超预算采购",
+    "cost_type": "设备",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-02"
+  },
+  {
+    "request_id": "BR-003",
+    "project_id": "IT-2026",
+    "amount": "200000.00",
+    "reason": "合成数据平台建设",
+    "cost_type": "服务",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-03"
+  },
+  {
+    "request_id": "BR-004",
+    "project_id": "MFG-2026",
+    "amount": "140000.00",
+    "reason": "合成检测设备追加",
+    "cost_type": "设备",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-04"
+  },
+  {
+    "request_id": "BR-005",
+    "project_id": "HR-2026",
+    "amount": "70000.00",
+    "reason": "合成培训项目",
+    "cost_type": "服务",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-05"
+  },
+  {
+    "request_id": "BR-006",
+    "project_id": "MKT-2026",
+    "amount": "30000.00",
+    "reason": "合成市场调研",
+    "cost_type": "服务",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-06"
+  },
+  {
+    "request_id": "BR-007",
+    "project_id": "RND-2026",
+    "amount": "180000.00",
+    "reason": "合成研发设备采购",
+    "cost_type": "设备",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-07"
+  },
+  {
+    "request_id": "BR-008",
+    "project_id": "FIN-2026",
+    "amount": "120001.00",
+    "reason": "合成系统运维",
+    "cost_type": "服务",
+    "requester": "synthetic-user",
+    "created_at": "2026-03-08"
   }
 ]

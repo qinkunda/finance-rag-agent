@@ -1,0 +1,56 @@
+[
+  {
+    "role_code": "employee",
+    "role_name": "普通员工",
+    "knowledge_role": "employee",
+    "data_scope": "own"
+  },
+  {
+    "role_code": "department_manager",
+    "role_name": "部门负责人",
+    "knowledge_role": "manager",
+    "data_scope": "department"
+  },
+  {
+    "role_code": "finance_reviewer",
+    "role_name": "财务共享审核员",
+    "knowledge_role": "manager",
+    "data_scope": "finance"
+  },
+  {
+    "role_code": "finance_bp",
+    "role_name": "财务BP",
+    "knowledge_role": "manager",
+    "data_scope": "finance"
+  },
+  {
+    "role_code": "finance_manager",
+    "role_name": "财务负责人",
+    "knowledge_role": "admin",
+    "data_scope": "finance"
+  },
+  {
+    "role_code": "treasury",
+    "role_name": "出纳",
+    "knowledge_role": "manager",
+    "data_scope": "finance"
+  },
+  {
+    "role_code": "accountant",
+    "role_name": "会计",
+    "knowledge_role": "manager",
+    "data_scope": "finance"
+  },
+  {
+    "role_code": "auditor",
+    "role_name": "审计员",
+    "knowledge_role": "admin",
+    "data_scope": "audit"
+  },
+  {
+    "role_code": "admin",
+    "role_name": "系统管理员",
+    "knowledge_role": "employee",
+    "data_scope": "system"
+  }
+]

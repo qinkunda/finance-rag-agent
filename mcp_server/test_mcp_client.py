@@ -59,7 +59,8 @@ async def main() -> None:
             assert results["query_finance_policy"]["citations"]
             assert results["check_payment_request"]["status"] == "pass"
             assert results["check_budget_request"]["available_budget"] == "70000.00"
-            assert results["analyze_reconciliation"]["difference_count"] == 4
+            assert results["analyze_reconciliation"]["difference_count"] == 7
+            assert results["analyze_reconciliation"]["matched_count"] == 113
             assert len(results["get_document_lineage"]["file_sha256"]) == 64
             ticket = results["create_finance_ticket"]
             assert ticket["status"] == "confirmation_required" and ticket["created"] is False
