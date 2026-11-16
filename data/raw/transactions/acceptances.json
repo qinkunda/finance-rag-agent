@@ -1,0 +1,58 @@
+[
+  {
+    "acceptance_id": "ACC-005",
+    "contract_id": "HT-2026-002",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-11"
+  },
+  {
+    "acceptance_id": "ACC-007",
+    "contract_id": "HT-2026-004",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-11"
+  },
+  {
+    "acceptance_id": "ACC-013",
+    "contract_id": "HT-2026-008",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-11"
+  },
+  {
+    "acceptance_id": "ACC-016",
+    "contract_id": "HT-2026-006",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-11"
+  },
+  {
+    "acceptance_id": "ACC-PENDING",
+    "contract_id": "HT-2026-001",
+    "milestone": "delivery",
+    "status": "pending",
+    "accepted_at": null
+  },
+  {
+    "acceptance_id": "ACC-018",
+    "contract_id": "HT-2026-009",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-15"
+  },
+  {
+    "acceptance_id": "ACC-020",
+    "contract_id": "HT-2026-010",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-15"
+  },
+  {
+    "acceptance_id": "ACC-022",
+    "contract_id": "HT-2026-011",
+    "milestone": "delivery",
+    "status": "approved",
+    "accepted_at": "2026-03-15"
+  }
+]

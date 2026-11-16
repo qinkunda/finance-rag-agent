@@ -1,0 +1,27 @@
+[
+  {
+    "department_id": "D-SCM",
+    "name": "供应链部",
+    "cost_center": "CC-SC-01"
+  },
+  {
+    "department_id": "D-RD",
+    "name": "研发部",
+    "cost_center": "CC-RND-01"
+  },
+  {
+    "department_id": "D-FIN",
+    "name": "财务部",
+    "cost_center": "CC-FIN-01"
+  },
+  {
+    "department_id": "D-IT",
+    "name": "信息部",
+    "cost_center": "CC-IT-01"
+  },
+  {
+    "department_id": "D-AUDIT",
+    "name": "审计部",
+    "cost_center": "CC-AUDIT-01"
+  }
+]

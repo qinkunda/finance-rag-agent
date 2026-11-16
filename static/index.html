@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="统一财务平台合成演示：报销、合同付款、银行对账、审批、预算、图谱与审计。">
+  <link rel="icon" href="data:,">
+  <title>星汉财务｜统一智能工作台</title>
+  <style>
+    :root {
+      --navy-950: oklch(0.25 0.055 255); --navy-800: oklch(0.35 0.065 255);
+      --navy-650: oklch(0.46 0.055 255); --gray-50: oklch(0.975 0.004 90);
+      --gray-100: oklch(0.948 0.005 90); --gray-200: oklch(0.895 0.008 90);
+      --gray-500: oklch(0.52 0.015 255); --teal-600: oklch(0.49 0.075 190);
+      --teal-100: oklch(0.93 0.025 190); --red-650: oklch(0.49 0.15 28);
+      --red-100: oklch(0.94 0.025 28); --amber-700: oklch(0.49 0.09 70);
+      --amber-100: oklch(0.94 0.035 85); --green-700: oklch(0.45 0.09 150);
+      --green-100: oklch(0.93 0.03 150); --paper: var(--gray-50); --ink: var(--navy-950);
+      --muted: var(--navy-650); --line: var(--gray-200); --accent: var(--teal-600);
+      --font-ui: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --font-data: "SFMono-Regular", Consolas, "Microsoft YaHei", monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100dvh; background: var(--gray-100); color: var(--ink); font-family: var(--font-ui); font-size: 16px; line-height: 1.55; }
+    button, input, select, textarea { font: inherit; }
+    button, select { cursor: pointer; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button:disabled { cursor: wait; opacity: .55; }
+    .hidden { display: none !important; }
+    .app { min-height: 100dvh; display: flex; flex-direction: column; }
+    .window-bar { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 16px; background: var(--navy-950); color: var(--gray-50); font-size: 13px; }
+    .window-title { display: flex; gap: 10px; align-items: center; min-width: 0; }
+    .window-dots { display: flex; gap: 5px; }
+    .window-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-500); }
+    .window-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .window-meta { font-family: var(--font-data); font-size: 11px; opacity: .8; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 18px; background: var(--paper); border-bottom: 1px solid var(--line); }
+    .identity-block { min-width: 0; }
+    .identity-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .identity-name { margin: 0; font-size: 20px; line-height: 1.3; }
+    .identity-dept { color: var(--muted); font-size: 14px; }
+    .role-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+    .role-chip, .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 3px; font-size: 12px; background: var(--paper); color: var(--muted); }
+    .session-controls { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
+    .field { display: grid; gap: 6px; min-width: 0; }
+    .field label, .field-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+    input, select, textarea { width: 100%; min-height: 44px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); color: var(--ink); }
+    textarea { min-height: 96px; resize: vertical; }
+    .session-select { min-width: 210px; }
+    .shell { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    .sidebar { padding: 14px; background: var(--paper); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 14px; }
+    .brand-mark { width: 30px; height: 30px; position: relative; border: 2px solid var(--navy-950); border-radius: 3px; flex: none; }
+    .brand-mark::before, .brand-mark::after { content: ""; position: absolute; height: 2px; background: var(--navy-950); transform: rotate(-35deg); }
+    .brand-mark::before { width: 21px; left: 3px; top: 9px; }
+    .brand-mark::after { width: 14px; left: 8px; top: 17px; }
+    .brand strong { display: block; font-size: 16px; }
+    .brand small { display: block; color: var(--muted); font-family: var(--font-data); font-size: 10px; letter-spacing: .08em; }
+    .nav { display: flex; flex-wrap: wrap; gap: 6px; }
+    .nav-button { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 1 1 120px; padding: 9px 11px; border: 1px solid transparent; border-radius: 3px; background: transparent; text-align: left; font-size: 14px; transition: background .16s ease-out, transform .16s ease-out; }
+    .nav-button:hover { background: var(--gray-100); transform: translateY(-1px); }
+    .nav-button.active { background: var(--navy-950); color: var(--gray-50); }
+    .nav-count { min-width: 22px; padding: 0 5px; border-radius: 10px; background: var(--gray-100); color: var(--navy-950); text-align: center; font: 11px var(--font-data); }
+    .sidebar-note { display: none; margin: 18px 6px 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .main { min-width: 0; padding: 18px; }
+    .view { display: none; }
+    .view.active { display: block; animation: view-in .18s ease-out; }
+    @keyframes view-in { from { opacity: .5; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
+    .page-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .page-head h2 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -.02em; }
+    .page-head p { margin: 5px 0 0; max-width: 72ch; color: var(--muted); font-size: 14px; }
+    .page-code { font: 11px var(--font-data); color: var(--muted); }
+    .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--paper); margin-bottom: 16px; }
+    .metric { padding: 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .metric:nth-child(2n) { border-right: 0; }
+    .metric:nth-last-child(-n+2) { border-bottom: 0; }
+    .metric-value { display: block; font: 700 26px var(--font-data); }
+    .metric-label { color: var(--muted); font-size: 12px; }
+    .panel { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 3px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 9px 13px; border-bottom: 1px solid var(--line); }
+    .panel-head h3 { margin: 0; font-size: 15px; }
+    .panel-body { padding: 14px; }
+    .overview-grid { display: grid; gap: 16px; }
+    .queue-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tabs { display: flex; gap: 16px; flex-wrap: wrap; }
+    .tab { min-height: 44px; padding: 7px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 14px; }
+    .tab.active { border-bottom-color: var(--navy-950); font-weight: 700; }
+    .compact-select { width: auto; min-width: 128px; }
+    .item-list { display: grid; }
+    .item-row { width: 100%; min-height: 76px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 13px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; transition: background .16s ease-out; }
+    .item-row:last-child { border-bottom: 0; }
+    .item-row:hover, .item-row.selected { background: var(--gray-100); }
+    .item-title { display: block; font-weight: 650; overflow-wrap: anywhere; }
+    .item-meta { display: block; margin-top: 4px; color: var(--muted); font: 11px var(--font-data); overflow-wrap: anywhere; }
+    .item-amount { font: 700 14px var(--font-data); text-align: right; }
+    .status { display: inline-flex; align-items: center; width: fit-content; min-height: 24px; padding: 2px 7px; border-radius: 3px; background: var(--gray-100); color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .status.open { background: var(--amber-100); color: var(--amber-700); }
+    .status.done { background: var(--green-100); color: var(--green-700); }
+    .status.issue { background: var(--red-100); color: var(--red-650); }
+    .empty { padding: 28px 14px; color: var(--muted); text-align: center; font-size: 14px; }
+    .detail-empty { padding: 36px 16px; color: var(--muted); text-align: center; }
+    .detail-title { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+    .detail-sub { margin: 6px 0 0; color: var(--muted); font: 11px var(--font-data); overflow-wrap: anywhere; }
+    .detail-section { padding: 14px; border-bottom: 1px solid var(--line); }
+    .detail-section h4 { margin: 0 0 10px; font-size: 13px; }
+    .kv { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 7px 10px; margin: 0; font-size: 13px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; overflow-wrap: anywhere; }
+    .money { font-family: var(--font-data); font-weight: 700; }
+    .action-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { min-height: 44px; padding: 8px 14px; border: 1px solid var(--navy-950); border-radius: 3px; background: var(--navy-950); color: var(--gray-50); font-weight: 650; font-size: 14px; transition: transform .16s ease-out, background .16s ease-out; }
+    .btn:hover { transform: translateY(-1px); background: var(--navy-800); }
+    .btn.secondary { border-color: var(--line); background: transparent; color: var(--ink); }
+    .btn.secondary:hover { background: var(--gray-100); }
+    .btn.danger { border-color: var(--red-650); background: transparent; color: var(--red-650); }
+    .btn.accent { border-color: var(--accent); background: var(--accent); }
+    .btn.small { min-height: 36px; padding: 5px 10px; font-size: 12px; }
+    .timeline { list-style: none; margin: 0; padding: 0; }
+    .timeline li { position: relative; padding: 0 0 14px 18px; border-left: 1px solid var(--line); margin-left: 4px; font-size: 13px; }
+    .timeline li::before { content: ""; position: absolute; width: 7px; height: 7px; left: -4px; top: 6px; border-radius: 50%; background: var(--navy-650); }
+    .timeline-meta { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .notice { padding: 11px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--gray-100); color: var(--muted); font-size: 13px; }
+    .notice.issue { border-color: var(--red-650); background: var(--red-100); color: var(--red-650); }
+    .notice + .notice { margin-top: 8px; }
+    .citation { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+    .citation:last-child { border-bottom: 0; }
+    .citation code { display: block; color: var(--muted); font: 10px var(--font-data); overflow-wrap: anywhere; }
+    .form-grid { display: grid; gap: 14px; }
+    .form-grid.two { grid-template-columns: minmax(0, 1fr); }
+    .form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+    .business-grid, .admin-grid { display: grid; gap: 16px; }
+    .help-list { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+    .help-list li { margin: 6px 0; }
+    .split { display: grid; gap: 16px; }
+    .graph-canvas { width: 100%; min-height: 280px; display: block; background: var(--gray-100); border: 1px solid var(--line); }
+    .graph-node { cursor: pointer; }
+    .graph-node rect { fill: var(--paper); stroke: var(--navy-650); rx: 3; }
+    .graph-node text { fill: var(--ink); font: 11px var(--font-ui); pointer-events: none; }
+    .graph-edge { stroke: var(--gray-500); stroke-width: 1; opacity: .65; }
+    .graph-node-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .data-list { display: grid; gap: 0; }
+    .data-row { display: grid; gap: 4px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .data-row:last-child { border-bottom: 0; }
+    .data-row strong { overflow-wrap: anywhere; }
+    .data-row small { color: var(--muted); font-family: var(--font-data); overflow-wrap: anywhere; }
+    .chat-log { min-height: 260px; max-height: 480px; overflow-y: auto; display: grid; gap: 12px; align-content: start; padding: 14px; }
+    .message { max-width: 88%; padding: 11px 13px; border-radius: 3px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+    .message.user { justify-self: end; background: var(--navy-950); color: var(--gray-50); }
+    .message.assistant { justify-self: start; background: var(--gray-100); }
+    .quick-questions { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+    .toast { position: fixed; z-index: 30; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 15px; border-radius: 3px; background: var(--navy-950); color: var(--gray-50); box-shadow: 0 8px 28px oklch(0.2 0.03 255 / .18); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .16s ease-out, transform .16s ease-out; font-size: 14px; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: var(--red-650); }
+    .modal { position: fixed; z-index: 20; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: oklch(0.2 0.03 255 / .45); }
+    .modal.open { display: flex; }
+    .modal-window { width: min(520px, 100%); max-height: 90dvh; overflow-y: auto; padding: 18px; border-radius: 3px; background: var(--paper); box-shadow: 0 18px 50px oklch(0.2 0.03 255 / .25); }
+    .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 14px; }
+    .modal-head h3 { margin: 0; font-size: 18px; }
+    .close-btn { min-width: 44px; min-height: 44px; border: 0; background: transparent; font-size: 22px; }
+    .loading { color: var(--muted); font-size: 13px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (min-width: 720px) {
+      .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .metric { border-bottom: 0; } .metric:nth-child(2n) { border-right: 1px solid var(--line); } .metric:last-child { border-right: 0; }
+      .form-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .business-grid, .admin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1040px) {
+      .shell { grid-template-columns: 208px minmax(0, 1fr); }
+      .sidebar { border-bottom: 0; border-right: 1px solid var(--line); }
+      .nav { display: grid; }
+      .nav-button { width: 100%; }
+      .sidebar-note { display: block; }
+      .main { padding: 22px; }
+    }
+    @media (min-width: 1380px) {
+      .overview-grid { grid-template-columns: minmax(0, 1fr) 410px; }
+      .detail-panel { max-height: calc(100dvh - 180px); overflow-y: auto; }
+      .split { grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); }
+    }
+    @media (max-width: 560px) {
+      .window-meta { display: none; }
+      .topbar { padding: 12px; }
+      .session-controls, .session-controls .field, .session-select { width: 100%; min-width: 0; }
+      .session-controls .btn { width: 100%; }
+      .main { padding: 14px 12px; }
+      .page-head h2 { font-size: 21px; }
+      .item-row { grid-template-columns: minmax(0, 1fr); }
+      .item-amount { text-align: left; }
+      .kv { grid-template-columns: 82px minmax(0, 1fr); }
+      .message { max-width: 96%; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="window-bar"><div class="window-title"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>财务运营中心 / 统一事项工作台</span></div><span class="window-meta">SYNTHETIC · SQLITE · RAG</span></div>
+  <header class="topbar">
+    <div class="identity-block"><div class="identity-line"><h1 class="identity-name" id="identity-name">正在载入</h1><span class="identity-dept" id="identity-dept">统一智能工作台</span></div><div class="role-list" id="role-list"></div></div>
+    <div class="session-controls"><div class="field"><label for="user-select">切换模拟用户</label><select class="session-select" id="user-select"></select></div><button class="btn secondary" id="switch-user">进入工作台</button></div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><strong>星汉财务</strong><small>FINANCE OPERATIONS</small></div></div>
+      <nav class="nav" aria-label="主导航">
+        <button class="nav-button active" data-view="overview">工作总览<span class="nav-count" id="task-count">0</span></button>
+        <button class="nav-button" data-view="business">业务办理</button>
+        <button class="nav-button" data-view="reconciliation">对账中心</button>
+        <button class="nav-button" data-view="graph">关系图谱</button>
+        <button class="nav-button hidden" data-view="admin" id="admin-nav">变更管理</button>
+        <button class="nav-button" data-view="assistant">财务助手</button>
+      </nav>
+      <p class="sidebar-note">统一入口，按用户、角色、数据范围和事项状态授权。所有数据均为合成演示。</p>
+    </aside>
+    <main class="main">
+      <section class="view active" id="view-overview">
+        <div class="page-head"><div><h2>今天需要处理什么</h2><p>待办、申请、异常与审批历史来自同一事项底座。</p></div><span class="page-code">WORK QUEUE / LIVE</span></div>
+        <div class="metrics"><div class="metric"><span class="metric-value" id="metric-tasks">—</span><span class="metric-label">我的待办</span></div><div class="metric"><span class="metric-value" id="metric-requests">—</span><span class="metric-label">我的申请</span></div><div class="metric"><span class="metric-value" id="metric-visible">—</span><span class="metric-label">可见事项</span></div><div class="metric"><span class="metric-value" id="metric-exceptions">—</span><span class="metric-label">未关闭异常</span></div></div>
+        <div class="overview-grid">
+          <div class="panel"><div class="panel-head"><div class="tabs"><button class="tab active" data-queue="tasks">我的待办</button><button class="tab" data-queue="requests">我的申请</button><button class="tab" data-queue="visible">可见事项</button></div><select class="compact-select" id="scenario-filter" aria-label="按场景筛选"><option value="">全部场景</option><option value="expense">费用报销</option><option value="payment">合同付款</option><option value="reconciliation">银行对账</option></select></div><div class="item-list" id="item-list"><div class="empty">正在读取事项…</div></div></div>
+          <div class="panel detail-panel" id="detail-panel"><div class="detail-empty">选择一条事项，查看单据、预算、附件与完整流程。</div></div>
+        </div>
+      </section>
+      <section class="view" id="view-business">
+        <div class="page-head"><div><h2>业务办理</h2><p>先计算与校验，再进入审批；新流程不信任前端自报职级或角色。</p></div><span class="page-code">CONTROLLED WRITE</span></div>
+        <div class="business-grid">
+          <div class="panel"><div class="panel-head"><h3>发起差旅报销</h3><span class="badge">费用计算 + 制度校验</span></div><div class="panel-body"><form class="form-grid" id="expense-form"><div class="form-grid two"><div class="field"><label for="expense-city">出差城市</label><select id="expense-city" required><option>北京</option><option>深圳</option><option>上海</option><option>成都</option><option>杭州</option><option>长沙</option></select></div><div class="field"><label for="expense-days">出差天数</label><input id="expense-days" type="number" min="1" max="30" value="3" required></div></div><div class="field"><label for="expense-price">住宿每晚单价（元）</label><input id="expense-price" type="number" min="0" step="0.01" value="450" required></div><div class="notice">住宿、伙食、交通由确定性规则计算；职级取当前登录用户。超标或五天以上行程会增加复核节点。</div><div class="form-actions"><button class="btn" type="submit">计算并提交审批</button></div></form></div></div>
+          <div class="panel"><div class="panel-head"><h3>提交合同付款</h3><span class="badge">合同 + 发票 + 验收</span></div><div class="panel-body"><form class="form-grid" id="payment-form"><div class="field"><label for="payment-request">本人可提交的付款申请</label><select id="payment-request" required></select></div><div class="notice">提交时执行合同状态、里程碑金额、供应商账户、发票、验收和风险预检。异常单进入退补，正常单进入审批。</div><div class="form-actions"><button class="btn" type="submit">预检并进入流程</button></div></form></div></div>
+        </div>
+      </section>
+      <section class="view" id="view-reconciliation">
+        <div class="page-head"><div><h2>银行对账中心</h2><p>按批次生成差异事项；会计处理、财务负责人复核后关闭，原始批次不被覆盖。</p></div><span class="page-code">120 BANK / 120 LEDGER</span></div>
+        <div class="split"><div class="panel"><div class="panel-head"><h3>发起对账批次</h3><span class="badge">确定性匹配</span></div><div class="panel-body"><form class="form-grid" id="recon-form"><div class="field"><label for="recon-account">账户范围</label><select id="recon-account"><option value="">全部账户</option><option value="CNY-OPER-001">CNY-OPER-001</option><option value="CNY-OPER-002">CNY-OPER-002</option></select></div><div class="notice">匹配交易号、金额、币种、日期和账户；重复记录单独分类。每次运行生成独立批次和差异待办。</div><div class="form-actions" id="recon-actions"><button class="btn" type="submit">运行并生成差异事项</button></div></form><div id="recon-result" style="margin-top:14px"></div></div></div><div class="panel"><div class="panel-head"><h3>处理规则</h3></div><div class="panel-body"><ul class="help-list"><li>银行有、总账无：核查未入账或延迟入账。</li><li>总账有、银行无：核查银行未达或错误引用。</li><li>金额、币种、日期或账户不一致：进入差异工单。</li><li>处理说明与复核意见写入流程时间线，不静默改数。</li></ul></div></div></div>
+      </section>
+      <section class="view" id="view-graph">
+        <div class="page-head"><div><h2>业务关系图谱</h2><p>由数据库明确关系生成，用于解释风险与影响追溯，不负责金额计算。</p></div><span class="page-code">RELATION / EVIDENCE</span></div>
+        <div class="panel"><div class="panel-body"><form id="graph-form" class="form-grid"><div class="field"><label for="graph-record">记录编号（如 PR-001、BX-2026-001）</label><input id="graph-record" value="PR-001" required></div><div class="form-actions"><button class="btn" type="submit">查询关系链</button><span class="badge">供应商—合同—里程碑—发票—验收—支付—凭证</span></div></form><div id="graph-content" style="margin-top:14px"><div class="empty">输入记录编号查询可见关系。</div></div></div></div>
+      </section>
+      <section class="view" id="view-admin">
+        <div class="page-head"><div><h2>变更管理</h2><p>当前状态即时生效，变更前后快照、执行人和生效时间完整留痕。</p></div><span class="page-code">EFFECTIVE CHANGE</span></div>
+        <div id="admin-content"><div class="empty">正在读取主数据…</div></div>
+      </section>
+      <section class="view" id="view-assistant">
+        <div class="page-head"><div><h2>统一财务助手</h2><p>1 个编排入口调用知识、报销、付款和对账受控能力；业务写入请在对应表单或事项中完成。</p></div><span class="page-code">1 ORCHESTRATOR + 4 TOOLS</span></div>
+        <div class="split"><div class="panel"><div class="chat-log" id="chat-log"><div class="message assistant">我可以解释制度、预检单据和分析对账。审批、支付和入账请在工作台中按权限执行。</div></div><div class="panel-body"><div class="quick-questions"><button class="btn secondary small" data-question="普通员工在一类城市的住宿费用上限是多少">住宿费用上限</button><button class="btn secondary small" data-question="请预检付款申请 PR-002">预检 PR-002</button><button class="btn secondary small" data-question="执行对账分析 CNY-OPER-002">分析账户对账</button></div><form id="chat-form"><div class="field"><label for="chat-input">输入财务问题</label><textarea id="chat-input" required></textarea></div><div class="form-actions"><button class="btn accent" type="submit">发送给统一助手</button></div></form></div></div><div class="panel"><div class="panel-head"><h3>依据与执行轨迹</h3></div><div class="panel-body" id="chat-evidence"><div class="empty">提问后显示制度引用和受控工具轨迹。</div></div></div></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="action-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-window"><div class="modal-head"><h3 id="modal-title">流程操作</h3><button class="close-btn" id="modal-close" aria-label="关闭">×</button></div><form class="form-grid" id="action-form"><p class="notice" id="modal-description"></p><div class="field" id="supplement-fields"><label for="supplement-reference">材料编号或说明</label><input id="supplement-reference" placeholder="例如 SUP-PDF-001"></div><div class="field"><label for="action-comment">处理意见</label><textarea id="action-comment" placeholder="退回、差异处理时必须填写"></textarea></div><div class="form-actions"><button class="btn" type="submit" id="action-submit">确认执行</button><button class="btn secondary" type="button" id="modal-cancel">取消</button></div></form></div></div>
+<script>
+'use strict';
+const state = { users: [], sessionId: localStorage.getItem('finance_session') || '', identity: null, workspace: null, queue: 'tasks', selected: null, action: null, actionKey: '', admin: null };
+const $ = (id) => document.getElementById(id);
+const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const money = (value) => Number(value || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const scenarioNames = {expense: '费用报销', payment: '合同付款', reconciliation: '银行对账'};
+const findingNames = {amount_mismatch:'金额差异',missing_in_ledger:'总账缺失',missing_in_bank:'银行未达',duplicate_bank_record:'银行流水重复',duplicate_ledger_record:'总账记录重复',currency_mismatch:'币种差异',date_mismatch:'日期差异',account_mismatch:'账户差异'};
+const statusNames = {draft:'草稿',pending_department:'待部门审批',pending_finance_review:'待财务初审',pending_finance_manager:'待财务负责人',pending_budget:'待预算审批',pending_budget_manager:'待预算负责人',pending_payment:'待模拟支付',paid:'待会计入账',needs_supplement:'待补充材料',pending_accountant:'待会计处理',pending_verification:'待复核',closed:'已关闭',cancelled:'已撤销'};
+const actionNames = {approve:'审批通过',return:'退回补件',pay:'模拟支付',post:'模拟入账',resolve:'提交差异处理',supplement:'提交补件',cancel:'撤销申请'};
+async function api(path, options = {}) {
+  const response = await fetch(path, {headers: {'Content-Type':'application/json', ...(options.headers || {})}, ...options});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || `请求失败（${response.status}）`);
+  return data;
+}
+function toast(message, error = false) { const el = $('toast'); el.textContent = message; el.className = `toast show${error ? ' error' : ''}`; clearTimeout(toast.timer); toast.timer = setTimeout(() => el.className = 'toast', 3200); }
+function statusBadge(status) { const cls = ['closed'].includes(status) ? 'done' : ['needs_supplement','cancelled'].includes(status) ? 'issue' : 'open'; return `<span class="status ${cls}">${esc(statusNames[status] || status)}</span>`; }
+function setBusy(button, busy, text = '处理中…') { if (busy) { button.dataset.old = button.textContent; button.textContent = text; } else if (button.dataset.old) button.textContent = button.dataset.old; button.disabled = busy; }
+</script>
+<script>
+function renderIdentity() {
+  const id = state.identity;
+  $('identity-name').textContent = id.display_name;
+  $('identity-dept').textContent = `${id.department_name} · ${id.position} · ${id.level}`;
+  $('role-list').innerHTML = id.role_names.map(x => `<span class="role-chip">${esc(x)}</span>`).join('') + '<span class="role-chip">合成演示</span>';
+  const admin = id.roles.some(x => ['admin','finance_manager','auditor'].includes(x));
+  $('admin-nav').classList.toggle('hidden', !admin);
+  if (!admin && document.querySelector('[data-view="admin"]').classList.contains('active')) showView('overview');
+  const canRecon = id.roles.some(x => ['accountant','finance_manager'].includes(x));
+  $('recon-actions').classList.toggle('hidden', !canRecon);
+}
+function renderMetrics() {
+  const s = state.workspace.summary;
+  $('metric-tasks').textContent = s.tasks; $('metric-requests').textContent = s.requests;
+  $('metric-visible').textContent = s.visible; $('metric-exceptions').textContent = s.open_exceptions;
+  $('task-count').textContent = s.tasks;
+}
+function queueItems() {
+  const key = state.queue === 'tasks' ? 'tasks' : state.queue === 'requests' ? 'requests' : 'visible_items';
+  const filter = $('scenario-filter').value;
+  return (state.workspace[key] || []).filter(x => !filter || x.scenario === filter);
+}
+function renderQueue() {
+  const items = queueItems();
+  if (!items.length) { $('item-list').innerHTML = '<div class="empty">当前筛选下没有事项。</div>'; return; }
+  $('item-list').innerHTML = items.map(x => `<button class="item-row${state.selected?.item_id === x.item_id ? ' selected' : ''}" data-item-id="${esc(x.item_id)}"><span><span class="item-title">${esc(x.title)}</span><span class="item-meta">${esc(scenarioNames[x.scenario])} · ${esc(x.record_id)} · ${esc(x.creator_name)} → ${esc(x.assignee_name || '无待办')}</span></span><span class="item-amount">¥ ${money(x.amount)}</span><span>${statusBadge(x.status)}</span><span class="item-meta">版本 ${x.version}</span></button>`).join('');
+}
+function renderPaymentOptions() {
+  const rows = state.workspace.available_payments || [];
+  $('payment-request').innerHTML = rows.length ? rows.map(x => `<option value="${esc(x.request_id)}">${esc(x.request_id)}｜${esc(x.contract_title)}｜¥${money(x.amount)}</option>`).join('') : '<option value="">当前没有可提交的本人付款申请</option>';
+  $('payment-form').querySelector('button[type="submit"]').disabled = !rows.length;
+}
+function businessRows(item) {
+  const b = item.business || {};
+  const fields = item.scenario === 'expense' ? [
+    ['出差城市', b.city], ['天数', b.days], ['职级', b.level], ['住宿单价', b.lodging_price], ['住宿合计', b.lodging_total], ['伙食', b.meal_total], ['市内交通', b.transport_total], ['超标金额', b.overlimit_amount]
+  ] : item.scenario === 'payment' ? [
+    ['合同', b.contract_id], ['合同名称', b.contract_title], ['供应商', b.vendor_name], ['供应商状态', b.vendor_status], ['风险等级', b.risk_level], ['里程碑', b.milestone_code], ['发票', b.invoice_id || '无'], ['验收单', b.acceptance_id || '无']
+  ] : [['差异记录', item.record_id], ['处理要求', '会计处理后由财务负责人复核']];
+  return fields.filter(x => x[1] !== undefined && x[1] !== null).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('');
+}
+function renderDetail() {
+  const item = state.selected;
+  if (!item) { $('detail-panel').innerHTML = '<div class="detail-empty">选择一条事项，查看单据、预算、附件与完整流程。</div>'; return; }
+  const actions = (item.allowed_actions || []).map(action => `<button class="btn ${['return','cancel'].includes(action) ? 'danger' : action === 'approve' ? '' : 'secondary'}" data-action="${action}">${esc(actionNames[action])}</button>`).join('');
+  const reservation = item.budget_reservation ? `<div class="notice">预算预留 ${esc(item.budget_reservation.reservation_id)}：¥ ${money(item.budget_reservation.amount)}，状态 ${esc(item.budget_reservation.status)}</div>` : '<div class="notice">尚未产生预算预留；进入预算节点时按可用余额冻结。</div>';
+  const exceptions = (item.exceptions || []).length ? item.exceptions.map(x => `<div class="notice ${x.status !== 'resolved' ? 'issue' : ''}"><strong>${esc(x.code)}</strong><br>${esc(x.message)}<br><small>${esc(x.status)}${x.resolution_note ? ' · ' + esc(x.resolution_note) : ''}</small></div>`).join('') : '<div class="empty">无异常记录</div>';
+  const attachments = (item.attachments || []).length ? item.attachments.map(x => `<div class="citation"><strong>${esc(x.type)} · ${esc(x.attachment_id)}</strong><code>${esc(x.path)}<br>SHA256 ${esc(x.sha256)}</code></div>`).join('') : '<div class="empty">无登记附件</div>';
+  const payments = [...(item.payments || []).map(x => `<div class="notice">模拟支付 ${esc(x.reference_no)} · ¥ ${money(x.amount)} · ${esc(x.status)}</div>`), ...(item.vouchers || []).map(x => `<div class="notice">模拟凭证 ${esc(x.voucher_id)} · ¥ ${money(x.amount)} · ${esc(x.status)}</div>`)].join('');
+  const events = (item.events || []).map(x => `<li><strong>${esc(x.actor_name)} · ${esc(actionNames[x.action] || x.action)}</strong><br>${esc(statusNames[x.from_status] || x.from_status)} → ${esc(statusNames[x.to_status] || x.to_status)}${x.comment ? '<br>' + esc(x.comment) : ''}<span class="timeline-meta">${esc(x.created_at)}</span></li>`).join('');
+  const citations = (item.current_policy_citations || []).map(x => `<div class="citation"><strong>${esc(x.title)} V${esc(x.version)}</strong><code>${esc(x.document_id)} · ${esc(x.chunk_id)} · 生效 ${esc(x.effective_date)}</code></div>`).join('');
+  $('detail-panel').innerHTML = `<div class="detail-section"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h3 class="detail-title">${esc(item.title)}</h3><p class="detail-sub">${esc(item.item_id)} · ${esc(item.record_id)}</p></div>${statusBadge(item.status)}</div></div>
+  <div class="detail-section"><dl class="kv"><dt>业务场景</dt><dd>${esc(scenarioNames[item.scenario])}</dd><dt>金额</dt><dd class="money">¥ ${money(item.amount)}</dd><dt>申请人</dt><dd>${esc(item.created_by)}</dd><dt>当前处理人</dt><dd>${esc(item.current_assignee || '无')}</dd><dt>预算项目</dt><dd>${esc(item.project_id)}</dd><dt>制度快照</dt><dd>${esc(item.policy_version)}</dd><dt>乐观版本</dt><dd>V${item.version}</dd></dl></div>
+  <div class="detail-section"><h4>单据信息</h4><dl class="kv">${businessRows(item)}</dl></div>
+  ${actions ? `<div class="detail-section"><h4>当前可执行动作</h4><div class="action-grid">${actions}</div></div>` : ''}
+  <div class="detail-section"><h4>预算联动</h4>${reservation}${payments}</div>
+  <div class="detail-section"><h4>异常与处理</h4>${exceptions}</div>
+  <div class="detail-section"><h4>附件证据</h4>${attachments}</div>
+  <div class="detail-section"><h4>当前制度依据</h4>${citations || '<div class="empty">未检索到当前条款</div>'}</div>
+  <div class="detail-section"><h4>流程时间线</h4><ol class="timeline">${events}</ol></div>`;
+}
+async function openItem(itemId) {
+  try { state.selected = await api(`/enterprise/items/${encodeURIComponent(itemId)}?session_id=${encodeURIComponent(state.sessionId)}`); renderDetail(); renderQueue(); }
+  catch (error) { toast(error.message, true); }
+}
+async function loadWorkspace() {
+  state.workspace = await api(`/enterprise/workspace?session_id=${encodeURIComponent(state.sessionId)}`);
+  state.identity = state.workspace.identity;
+  localStorage.setItem('finance_session', state.sessionId);
+  renderIdentity(); renderMetrics(); renderQueue(); renderPaymentOptions();
+  if (state.selected) {
+    const still = state.workspace.visible_items.some(x => x.item_id === state.selected.item_id);
+    if (still) await openItem(state.selected.item_id); else { state.selected = null; renderDetail(); }
+  }
+}
+async function switchUser(userId) {
+  const button = $('switch-user'); setBusy(button, true);
+  try {
+    const sessionId = 'web-' + crypto.randomUUID();
+    await api('/enterprise/session', {method:'POST', body:JSON.stringify({user_id:userId, session_id:sessionId})});
+    state.sessionId = sessionId; state.selected = null; state.admin = null;
+    await loadWorkspace(); renderDetail(); toast(`已进入${state.identity.display_name}的工作台`);
+  } catch (error) { toast(error.message, true); }
+  finally { setBusy(button, false); }
+}
+function showView(name) {
+  document.querySelectorAll('.view').forEach(x => x.classList.toggle('active', x.id === `view-${name}`));
+  document.querySelectorAll('.nav-button').forEach(x => x.classList.toggle('active', x.dataset.view === name));
+  if (name === 'admin') loadAdmin();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+document.querySelectorAll('[data-queue]').forEach(button => button.addEventListener('click', () => { state.queue = button.dataset.queue; document.querySelectorAll('[data-queue]').forEach(x => x.classList.toggle('active', x === button)); renderQueue(); }));
+$('scenario-filter').addEventListener('change', renderQueue);
+$('item-list').addEventListener('click', event => { const row = event.target.closest('[data-item-id]'); if (row) openItem(row.dataset.itemId); });
+$('switch-user').addEventListener('click', () => switchUser($('user-select').value));
+$('user-select').addEventListener('change', () => switchUser($('user-select').value));
+</script>
+<script>
+function openAction(action) {
+  if (!state.selected) return;
+  state.action = action; state.actionKey = 'WEB-' + crypto.randomUUID();
+  $('modal-title').textContent = actionNames[action] || action;
+  $('modal-description').textContent = `${state.selected.title}｜当前版本 V${state.selected.version}。操作将写入流程与审计记录。`;
+  $('supplement-fields').classList.toggle('hidden', action !== 'supplement');
+  $('supplement-reference').required = action === 'supplement';
+  $('action-comment').value = ''; $('supplement-reference').value = '';
+  $('action-submit').textContent = action === 'pay' ? '确认模拟支付' : action === 'post' ? '确认模拟入账' : '确认执行';
+  $('action-modal').classList.add('open'); $('action-comment').focus();
+}
+function closeModal() { $('action-modal').classList.remove('open'); state.action = null; }
+$('detail-panel').addEventListener('click', event => { const button = event.target.closest('[data-action]'); if (button) openAction(button.dataset.action); });
+$('modal-close').addEventListener('click', closeModal); $('modal-cancel').addEventListener('click', closeModal);
+$('action-modal').addEventListener('click', event => { if (event.target === $('action-modal')) closeModal(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && $('action-modal').classList.contains('open')) closeModal(); });
+$('action-form').addEventListener('submit', async event => {
+  event.preventDefault(); if (!state.action || !state.selected) return;
+  const action = state.action, comment = $('action-comment').value.trim(), reference = $('supplement-reference').value.trim();
+  if (['return','resolve'].includes(action) && !comment) { toast('该动作必须填写处理意见', true); return; }
+  const button = $('action-submit'); setBusy(button, true);
+  try {
+    const result = await api(`/enterprise/items/${encodeURIComponent(state.selected.item_id)}/actions`, {method:'POST', body:JSON.stringify({
+      session_id:state.sessionId, action, expected_version:state.selected.version, idempotency_key:state.actionKey,
+      comment, payload:action === 'supplement' ? {reference, material_type:'补充材料'} : {}
+    })});
+    closeModal(); await loadWorkspace(); await openItem(result.item_id); toast(`${actionNames[action]}完成，事项进入${statusNames[result.status] || result.status}`);
+  } catch (error) { toast(error.message, true); if (error.message.includes('版本')) { await loadWorkspace(); closeModal(); } }
+  finally { setBusy(button, false); }
+});
+$('expense-form').addEventListener('submit', async event => {
+  event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true);
+  try {
+    const item = await api('/enterprise/expenses', {method:'POST', body:JSON.stringify({session_id:state.sessionId, city:$('expense-city').value, days:Number($('expense-days').value), lodging_price:$('expense-price').value})});
+    await loadWorkspace(); state.selected = item; showView('overview'); renderDetail(); toast(`报销 ${item.record_id} 已提交，金额 ¥${money(item.amount)}`);
+  } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
+});
+$('payment-form').addEventListener('submit', async event => {
+  event.preventDefault(); const requestId = $('payment-request').value; if (!requestId) return;
+  const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true);
+  try {
+    const item = await api(`/enterprise/payments/${encodeURIComponent(requestId)}/submit`, {method:'POST', body:JSON.stringify({session_id:state.sessionId})});
+    await loadWorkspace(); state.selected = item; showView('overview'); renderDetail(); toast(`${requestId} 已完成预检并进入${statusNames[item.status]}`);
+  } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
+});
+$('recon-form').addEventListener('submit', async event => {
+  event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true, '正在匹配…');
+  try {
+    const result = await api('/enterprise/reconciliation/runs', {method:'POST', body:JSON.stringify({session_id:state.sessionId, account_id:$('recon-account').value || null})});
+    const a = result.analysis;
+    $('recon-result').innerHTML = `<div class="notice"><strong>${esc(result.run_id)}</strong><br>匹配 ${a.matched_count} 笔，差异 ${a.difference_count} 项；银行 ${a.bank_record_count} 条，总账 ${a.ledger_record_count} 条。</div><div class="graph-node-list">${result.item_ids.map(id => `<button class="btn secondary small" data-recon-item="${esc(id)}">处理 ${esc(id.slice(0,18))}…</button>`).join('')}</div>`;
+    await loadWorkspace(); toast('对账批次和差异待办已生成');
+  } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
+});
+$('recon-result').addEventListener('click', event => { const button = event.target.closest('[data-recon-item]'); if (button) { showView('overview'); openItem(button.dataset.reconItem); } });
+function addMessage(kind, text) { const node = document.createElement('div'); node.className = `message ${kind}`; node.textContent = text; $('chat-log').appendChild(node); $('chat-log').scrollTop = $('chat-log').scrollHeight; }
+function renderChatEvidence(result) {
+  const citations = (result.citations || []).map(x => `<div class="citation"><strong>${esc(x.title)} V${esc(x.version)}</strong><code>${esc(x.document_id)} · ${esc(x.chunk_id)}</code></div>`).join('');
+  const trace = (result.trace || []).map(x => `<div class="data-row"><strong>${esc(x.step)}</strong><small>${esc(JSON.stringify(x))}</small></div>`).join('');
+  const findings = (result.data?.findings || []).map(x => `<div class="notice issue">${esc(x.message || findingNames[x.code] || x.code)}${x.record_id ? `<br><small>${esc(x.record_id)}</small>` : ''}</div>`).join('');
+  $('chat-evidence').innerHTML = `${findings}<h4>制度引用</h4>${citations || '<div class="empty">无引用</div>'}<h4>执行轨迹</h4><div class="data-list">${trace}</div>`;
+}
+async function ask(question) {
+  if (!question.trim()) return;
+  addMessage('user', question); $('chat-input').value = ''; addMessage('assistant', '正在执行受控查询…');
+  const pending = $('chat-log').lastChild;
+  try { const result = await api('/enterprise/assistant', {method:'POST', body:JSON.stringify({session_id:state.sessionId, question})}); pending.textContent = result.answer; renderChatEvidence(result); }
+  catch (error) { pending.textContent = error.message; pending.classList.add('error'); toast(error.message, true); }
+}
+$('chat-form').addEventListener('submit', event => { event.preventDefault(); ask($('chat-input').value); });
+document.querySelectorAll('[data-question]').forEach(button => button.addEventListener('click', () => ask(button.dataset.question)));
+</script>
+<script>
+const graphColumns = [['user','vendor'],['contract','expense','budget'],['milestone','payment_request'],['invoice','acceptance','work_item'],['payment','voucher','bank','ledger']];
+function renderGraph(graph) {
+  const columns = graphColumns.map(types => graph.nodes.filter(x => types.includes(x.type)));
+  const known = new Set(graphColumns.flat());
+  columns[2].push(...graph.nodes.filter(x => !known.has(x.type)));
+  const height = Math.max(340, ...columns.map(rows => rows.length * 66 + 30));
+  const positions = {};
+  columns.forEach((rows, column) => rows.forEach((node, index) => { positions[node.id] = {x:20 + column * 186, y:20 + index * 66}; }));
+  const lines = graph.edges.filter(x => positions[x.source] && positions[x.target]).map(edge => { const a=positions[edge.source], b=positions[edge.target]; return `<line class="graph-edge" x1="${a.x+150}" y1="${a.y+22}" x2="${b.x}" y2="${b.y+22}"><title>${esc(edge.type)}</title></line>`; }).join('');
+  const nodes = graph.nodes.filter(x => positions[x.id]).map(node => { const p=positions[node.id]; return `<g class="graph-node" data-node-id="${esc(node.id)}" tabindex="0" role="button" aria-label="查询 ${esc(node.id)}"><rect x="${p.x}" y="${p.y}" width="150" height="44"></rect><text x="${p.x+8}" y="${p.y+18}">${esc(node.id.length > 21 ? node.id.slice(0,20)+'…' : node.id)}</text><text x="${p.x+8}" y="${p.y+34}" style="fill:var(--muted);font-size:10px">${esc(node.type)}</text><title>${esc(node.label)}</title></g>`; }).join('');
+  $('graph-content').innerHTML = `<svg class="graph-canvas" viewBox="0 0 960 ${height}" style="min-height:${Math.min(height,520)}px" aria-label="业务关系图">${lines}${nodes}</svg><div class="graph-node-list">${graph.nodes.map(x => `<button class="btn secondary small" data-node-id="${esc(x.id)}">${esc(x.type)} · ${esc(x.id)}</button>`).join('')}</div>`;
+}
+async function queryGraph(recordId) {
+  const button = $('graph-form').querySelector('button'); setBusy(button, true);
+  try { const graph = await api(`/enterprise/graph?session_id=${encodeURIComponent(state.sessionId)}&record_id=${encodeURIComponent(recordId)}&depth=4`); renderGraph(graph); }
+  catch (error) { $('graph-content').innerHTML = `<div class="empty">${esc(error.message)}</div>`; toast(error.message, true); }
+  finally { setBusy(button, false); }
+}
+$('graph-form').addEventListener('submit', event => { event.preventDefault(); queryGraph($('graph-record').value.trim()); });
+function graphNodeAction(nodeId) {
+  const node = $('graph-content').querySelector(`[data-node-id="${CSS.escape(nodeId)}"]`);
+  if (nodeId.startsWith('WI-')) { showView('overview'); openItem(nodeId); }
+  else { $('graph-record').value = nodeId; queryGraph(nodeId); }
+}
+$('graph-content').addEventListener('click', event => { const node=event.target.closest('[data-node-id]'); if (node) graphNodeAction(node.dataset.nodeId); });
+$('graph-content').addEventListener('keydown', event => { const node=event.target.closest('[data-node-id]'); if (node && ['Enter',' '].includes(event.key)) { event.preventDefault(); graphNodeAction(node.dataset.nodeId); } });
+function optionsUsers(users, activeOnly = true) { return users.filter(x => !activeOnly || x.status === 'active').map(x => `<option value="${esc(x.user_id)}">${esc(x.display_name)}｜${esc(x.user_id)}｜${esc(x.role_names.join('/'))}</option>`).join(''); }
+function adminPanel(title, body) { return `<div class="panel"><div class="panel-head"><h3>${esc(title)}</h3></div><div class="panel-body">${body}</div></div>`; }
+function renderAdmin() {
+  const d=state.admin, roles=state.identity.roles, isAdmin=roles.includes('admin'), isFinance=roles.includes('finance_manager');
+  const panels=[];
+  if (isAdmin) {
+    panels.push(adminPanel('离职停用与待办接管', `<form class="form-grid" id="deactivate-form"><div class="field"><label for="deactivate-user">停用用户</label><select id="deactivate-user">${optionsUsers(d.users)}</select></div><div class="field"><label for="replacement-user">待办接管人（须具备相同角色）</label><select id="replacement-user">${optionsUsers(d.users)}</select></div><div class="notice">停用后原会话立即失效，历史审批不删除，当前待办转交给接管人。</div><button class="btn danger" type="submit">停用并转交代办</button></form>`));
+    panels.push(adminPanel('角色与部门调整', `<form class="form-grid" id="user-change-form"><div class="field"><label for="change-user">目标用户</label><select id="change-user">${optionsUsers(d.users)}</select></div><div class="form-grid two"><div class="field"><label for="add-role">追加角色</label><select id="add-role"><option value="">不变更角色</option><option value="department_manager">部门负责人</option><option value="finance_reviewer">财务共享审核员</option><option value="finance_bp">财务BP</option><option value="auditor">审计员</option></select></div><div class="field"><label for="change-department">调整部门</label><select id="change-department"><option value="">不变更部门</option><option value="D-SCM">供应链部</option><option value="D-RD">研发部</option><option value="D-FIN">财务部</option><option value="D-IT">信息部</option><option value="D-AUDIT">审计部</option></select></div></div><button class="btn" type="submit">应用组织变更</button></form>`));
+  }
+  if (isAdmin || isFinance) {
+    panels.push(adminPanel('供应商主数据', `<form class="form-grid" id="vendor-form"><div class="field"><label for="vendor-id">供应商</label><select id="vendor-id">${d.vendors.map(x=>`<option value="${esc(x.vendor_id)}">${esc(x.vendor_id)}｜${esc(x.vendor_name)}｜${esc(x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="vendor-status">状态</label><select id="vendor-status"><option value="active">active</option><option value="frozen">frozen</option><option value="inactive">inactive</option></select></div><div class="field"><label for="vendor-risk">风险</label><select id="vendor-risk"><option value="normal">normal</option><option value="high">high</option></select></div></div><button class="btn" type="submit">保存供应商变更</button></form>`));
+    panels.push(adminPanel('制度版本与生效日期', `<form class="form-grid" id="document-form"><div class="field"><label for="document-id">制度文档</label><select id="document-id">${d.documents.map(x=>`<option value="${esc(x.document_id)}" ${x.document_id==='POL-TRAVEL-2027-V3-0'?'selected':''}>${esc(x.title)}｜${esc(x.document_id)}｜${esc(x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="document-date">生效日期</label><input id="document-date" type="date" value="2027-01-01" required></div><div class="field"><label for="document-status">发布状态</label><select id="document-status"><option value="active">active</option><option value="pending">pending</option><option value="archived">archived</option></select></div></div><div class="notice">未来生效版本不会进入当前检索；历史事项仍保留提交时的制度快照。</div><button class="btn" type="submit">发布版本</button></form>`));
+  }
+  if (isFinance) panels.push(adminPanel('年度预算调整', `<form class="form-grid" id="budget-form"><div class="field"><label for="budget-project">预算项目</label><select id="budget-project">${d.budgets.map(x=>`<option value="${esc(x.project_id)}">${esc(x.project_id)}｜年度 ${esc(x.annual_budget)}｜冻结 ${esc(x.frozen)}</option>`).join('')}</select></div><div class="field"><label for="budget-amount">调整后年度预算</label><input id="budget-amount" type="number" min="1" step="0.01" required></div><div class="field"><label for="budget-reason">调整原因</label><input id="budget-reason" required placeholder="例如：新增专项任务"></div><button class="btn" type="submit">提交预算调整</button></form>`));
+  panels.push(adminPanel('变更记录', `<div class="data-list">${d.changes.length ? d.changes.map(x=>`<div class="data-row"><strong>${esc(x.entity_type)} · ${esc(x.entity_id)} · ${esc(x.change_type)}</strong><small>${esc(x.actor_id)}｜生效 ${esc(x.effective_at)}</small><details><summary>查看前后快照</summary><pre>${esc(JSON.stringify({before:JSON.parse(x.before_json),after:JSON.parse(x.after_json)},null,2))}</pre></details></div>`).join('') : '<div class="empty">尚无变更记录</div>'}</div>`));
+  $('admin-content').innerHTML=`<div class="admin-grid">${panels.join('')}</div>`;
+  bindAdminForms();
+}
+async function loadAdmin() { try { state.admin=await api(`/enterprise/admin-data?session_id=${encodeURIComponent(state.sessionId)}`); renderAdmin(); } catch(error) { $('admin-content').innerHTML=`<div class="empty">${esc(error.message)}</div>`; } }
+function renderUserOptions() {
+  const selected = state.identity?.user_id || $('user-select').value;
+  $('user-select').innerHTML=state.users.map(x=>`<option value="${esc(x.user_id)}" ${x.status!=='active'?'disabled':''}>${esc(x.display_name)}｜${esc(x.user_id)}${x.status!=='active'?'（已停用）':''}</option>`).join('');
+  if (state.users.some(x=>x.user_id===selected)) $('user-select').value=selected;
+}
+async function submitAdmin(path, payload, button) {
+  setBusy(button,true);
+  try {
+    await api(path,{method:'POST',body:JSON.stringify({session_id:state.sessionId,payload})});
+    if (path.includes('/changes/users/')) { state.users=await api('/enterprise/users'); renderUserOptions(); }
+    await loadAdmin(); await loadWorkspace(); toast('变更已生效并留痕');
+  }
+  catch(error){toast(error.message,true);} finally{setBusy(button,false);}
+}
+function bindAdminForms() {
+  const de=$('deactivate-form'); if(de) de.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/users/${encodeURIComponent($('deactivate-user').value)}/deactivate`,{replacement_id:$('replacement-user').value},event.target.querySelector('button'));});
+  const uc=$('user-change-form'); if(uc) uc.addEventListener('submit',event=>{event.preventDefault();const userId=$('change-user').value,user=state.admin.users.find(x=>x.user_id===userId),role=$('add-role').value,department=$('change-department').value,payload={};if(role)payload.roles=[...new Set([...user.roles,role])];if(department)payload.department_id=department;if(!Object.keys(payload).length){toast('请至少选择一项变更',true);return;}submitAdmin(`/enterprise/changes/users/${encodeURIComponent(userId)}`,payload,event.target.querySelector('button'));});
+  const vf=$('vendor-form'); if(vf) vf.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/vendors/${encodeURIComponent($('vendor-id').value)}`,{status:$('vendor-status').value,risk_level:$('vendor-risk').value},event.target.querySelector('button'));});
+  const bf=$('budget-form'); if(bf) bf.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/budgets/${encodeURIComponent($('budget-project').value)}`,{annual_budget:$('budget-amount').value,reason:$('budget-reason').value},event.target.querySelector('button'));});
+  const df=$('document-form'); if(df) df.addEventListener('submit',async event=>{event.preventDefault();const button=event.target.querySelector('button');setBusy(button,true);try{await api(`/enterprise/changes/documents/${encodeURIComponent($('document-id').value)}`,{method:'POST',body:JSON.stringify({session_id:state.sessionId,effective_from:$('document-date').value,status:$('document-status').value})});await loadAdmin();toast('制度版本已发布，检索按生效日期更新');}catch(error){toast(error.message,true);}finally{setBusy(button,false);}});
+}
+async function init() {
+  try {
+    state.users=await api('/enterprise/users');
+    renderUserOptions();
+    if(state.sessionId){try{await loadWorkspace();$('user-select').value=state.identity.user_id;return;}catch(error){localStorage.removeItem('finance_session');state.sessionId='';}}
+    const first=state.users.find(x=>x.user_id==='U-EMP-001')||state.users.find(x=>x.status==='active');
+    if(first){$('user-select').value=first.user_id;await switchUser(first.user_id);}
+  }catch(error){toast(error.message,true);$('identity-name').textContent='平台未连接';}
+}
+init();
+</script>
+</body>
+</html>

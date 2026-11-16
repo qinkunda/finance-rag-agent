@@ -1,0 +1,6 @@
+# 已按 Python 3.12 完成真实 stdio 协议联调；避免 MCP 1.12.4 与新版本依赖不兼容。
+mcp==1.12.4
+pydantic>=2.11,<2.13
+pydantic-settings>=2.5,<2.11
+starlette>=0.40,<0.48
+httpx>=0.27,<1

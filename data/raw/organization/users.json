@@ -1,0 +1,230 @@
+[
+  {
+    "user_id": "U-EMP-001",
+    "display_name": "林晓",
+    "department_id": "D-SCM",
+    "position": "费用专员",
+    "level": "普通员工",
+    "manager_id": "U-MGR-SCM",
+    "project_id": "LOG-2026",
+    "roles": [
+      "employee"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-EMP-002",
+    "display_name": "陈宇",
+    "department_id": "D-RD",
+    "position": "研发工程师",
+    "level": "普通员工",
+    "manager_id": "U-MGR-RD",
+    "project_id": "RND-2026",
+    "roles": [
+      "employee"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-EMP-003",
+    "display_name": "周宁",
+    "department_id": "D-SCM",
+    "position": "采购专员",
+    "level": "普通员工",
+    "manager_id": "U-MGR-SCM",
+    "project_id": "LOG-2026",
+    "roles": [
+      "employee"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-MGR-SCM",
+    "display_name": "王衡",
+    "department_id": "D-SCM",
+    "position": "供应链部负责人",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "LOG-2026",
+    "roles": [
+      "employee",
+      "department_manager"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-MGR-SCM-BACK",
+    "display_name": "唐准",
+    "department_id": "D-SCM",
+    "position": "供应链部副负责人",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "LOG-2026",
+    "roles": [
+      "employee",
+      "department_manager"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-MGR-RD",
+    "display_name": "赵祺",
+    "department_id": "D-RD",
+    "position": "研发部负责人",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "RND-2026",
+    "roles": [
+      "employee",
+      "department_manager"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-FIN-REVIEW",
+    "display_name": "孙岚",
+    "department_id": "D-FIN",
+    "position": "共享审核员",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "FIN-2026",
+    "roles": [
+      "finance_reviewer"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-FIN-REVIEW-BACK",
+    "display_name": "谢审",
+    "department_id": "D-FIN",
+    "position": "共享复核员",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "FIN-2026",
+    "roles": [
+      "finance_reviewer"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-FIN-BP",
+    "display_name": "刘芃",
+    "department_id": "D-FIN",
+    "position": "财务BP",
+    "level": "经理级",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "FIN-2026",
+    "roles": [
+      "finance_bp"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-FIN-HEAD",
+    "display_name": "何谨",
+    "department_id": "D-FIN",
+    "position": "财务负责人",
+    "level": "总监级",
+    "manager_id": null,
+    "project_id": "FIN-2026",
+    "roles": [
+      "finance_manager"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-TREASURY",
+    "display_name": "郑安",
+    "department_id": "D-FIN",
+    "position": "资金出纳",
+    "level": "普通员工",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "FIN-2026",
+    "roles": [
+      "treasury"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-ACCOUNTANT",
+    "display_name": "罗会",
+    "department_id": "D-FIN",
+    "position": "总账会计",
+    "level": "普通员工",
+    "manager_id": "U-FIN-HEAD",
+    "project_id": "FIN-2026",
+    "roles": [
+      "accountant"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-AUDITOR",
+    "display_name": "顾言",
+    "department_id": "D-AUDIT",
+    "position": "审计专员",
+    "level": "经理级",
+    "manager_id": null,
+    "project_id": "FIN-2026",
+    "roles": [
+      "auditor"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-ADMIN",
+    "display_name": "系统管理员",
+    "department_id": "D-IT",
+    "position": "系统管理员",
+    "level": "普通员工",
+    "manager_id": null,
+    "project_id": "IT-2026",
+    "roles": [
+      "admin"
+    ],
+    "status": "active",
+    "effective_from": "2026-01-01",
+    "effective_to": null
+  },
+  {
+    "user_id": "U-LEAVER",
+    "display_name": "苏离",
+    "department_id": "D-SCM",
+    "position": "离职演示员工",
+    "level": "普通员工",
+    "manager_id": "U-MGR-SCM",
+    "project_id": "LOG-2026",
+    "roles": [
+      "employee"
+    ],
+    "status": "terminated",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-03-31"
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "attachment_id": "ATT-INV-018",
+    "record_id": "PR-017",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-018.pdf",
+    "sha256": "ddb4b5fc3e643da0c384f50fca460f60021a86a3121ba60ad33090ab0346a3a7"
+  },
+  {
+    "attachment_id": "ATT-INV-019",
+    "record_id": "PR-018",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-019.pdf",
+    "sha256": "12fbd46f80ffd70f66416b1f070a55681b55c687abf6349f03f64a744dc56e06"
+  },
+  {
+    "attachment_id": "ATT-INV-020",
+    "record_id": "PR-019",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-020.pdf",
+    "sha256": "f865b9e7a01be0408368ea00a122f12b628d3c4659076b80a6907e69405f43ab"
+  },
+  {
+    "attachment_id": "ATT-INV-021",
+    "record_id": "PR-020",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-021.pdf",
+    "sha256": "ad33279700eecc2d6fec4d85f0b03396313b6ae40267be38847e5374535aeb5d"
+  },
+  {
+    "attachment_id": "ATT-INV-022",
+    "record_id": "PR-021",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-022.pdf",
+    "sha256": "d8bb04d09ddd606587cb8141acdfebd5293453750e82b5281afdd8727f9369df"
+  },
+  {
+    "attachment_id": "ATT-INV-023",
+    "record_id": "PR-022",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-023.pdf",
+    "sha256": "7338fec73e0ef1d5fe885a408d55798177b7f12353149fd7c72351e6ed92fe8f"
+  },
+  {
+    "attachment_id": "ATT-INV-024",
+    "record_id": "PR-023",
+    "type": "invoice",
+    "path": "data/raw/attachments/INV-024.pdf",
+    "sha256": "1f25f13d15358e204ebcf21d2e09fa5eac77fe9689cb897fa606793abcbe1e9d"
+  },
+  {
+    "attachment_id": "ATT-ACC-018",
+    "record_id": "HT-2026-009",
+    "type": "acceptance",
+    "path": "data/raw/attachments/ACC-018.pdf",
+    "sha256": "b26eff595b3899fadd2af9cc6d7ac3ad44282453d7b0181ec3a3a794c66b98e5"
+  },
+  {
+    "attachment_id": "ATT-ACC-020",
+    "record_id": "HT-2026-010",
+    "type": "acceptance",
+    "path": "data/raw/attachments/ACC-020.pdf",
+    "sha256": "38fb7402cbf1c431e528f62a0f8a0e5129a4c03a9228fde9f0bda27cd6678119"
+  },
+  {
+    "attachment_id": "ATT-ACC-022",
+    "record_id": "HT-2026-011",
+    "type": "acceptance",
+    "path": "data/raw/attachments/ACC-022.pdf",
+    "sha256": "f6bef40075f9233023a0dd507778bbce85115134e5656d9ec291566cd0d97b4b"
+  }
+]
