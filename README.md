@@ -152,7 +152,7 @@ python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ### 7.1 新建报销与退补
 
 1. 选择 **林晓**，进入“业务办理 → 发起差旅报销”。
-2. 填写 **深圳、2 天、住宿每晚 450 元**，点击“计算并提交审批”。
+2. 填写 **深圳、2 天、住宿每晚 450 元**，点击“计算并预览”，核对费用、异常提示和完整处理人流程后确认提交。
 3. 预期：住宿 450 + 伙食 300 + 市内交通 160 = **910 元**；职级来自林晓的当前身份“普通员工”；新事项进入 `pending_department`，处理人为王衡。
 4. 返回初始数据后，打开林晓的 **BX-2026-016**，填写补件说明并重新提交；预期从 `needs_supplement` 回到 `pending_finance_review`，补件与异常处理进入时间线。
 
@@ -212,6 +212,15 @@ python -m uvicorn api:app --host 127.0.0.1 --port 8000
 
 助手用于知识解释、只读预检和分析。审批、退补、支付、入账与主数据写入由相应业务控件执行，避免通过自然语言绕过权限和流程。
 
+### 7.8 企业智能体升级
+
+- **审计持久化**：每次 LLM／离线工具调用写入 `agent_audit_events`，记录请求编号、用户、原始问题、参数、结果摘要、状态、模型、耗时和时间。审计员、财务负责人和系统管理员可在“变更管理 → 智能体审计日志”查看，也可调用 `GET /enterprise/audit-events`。
+- **数字校验守卫**：LLM 终稿中的阿拉伯数字、常见中文数字和百分比必须与工具证据匹配；引用编号不参与误判。无法核验时返回 `guard_blocked`，不展示原错误答案；有预填草稿时改用工具直接生成的安全说明。
+- **问答 → 预填 → 人工确认**：`prepare_expense`／`prepare_payment` 只返回结构化草稿，不直接写业务库。前端“填入表单并预览”只填充表单，用户仍须在原表单中确认提交。
+- **流式输出**：`POST /enterprise/assistant/stream` 使用 SSE 推送模型与工具进度，终稿通过数字校验后分段输出，前端打字机渲染，避免未校验数字提前上屏。
+- **模型路由**：简单问题默认 `qwen-flash`，复杂分析默认 `qwen-plus`；`FINANCE_LLM_FALLBACK_MODEL` 可配置备用模型，回退模型名写入执行轨迹和审计。
+- **向量检索**：Chroma 记录 `vector_manifest.json` 和 embedding 模型；换模型必须重建索引。检索不可用时返回 `lexical_fallback` 和明确原因，不冒充语义检索。
+
 ## 8. 企业 API 与兼容接口
 
 ### 主接口
@@ -221,12 +230,16 @@ python -m uvicorn api:app --host 127.0.0.1 --port 8000
 | `GET /enterprise/users` | 获取模拟用户和当前角色 |
 | `POST /enterprise/session` | 建立或复用企业会话；同一编号不能绑定不同用户 |
 | `GET /enterprise/workspace` | 可见事项、我的待办、我的申请和可提交付款 |
-| `GET /enterprise/items/{item_id}` | 事项详情、业务数据、证据、预算、事件和允许动作 |
+| `GET /enterprise/items/{item_id}` | 事项详情、人员姓名、完整流程、业务数据、证据、预算摘要、任务事件和允许动作 |
+| `POST /enterprise/expenses/precheck` | 只读计算报销费用、异常和完整处理人流程，不创建记录 |
 | `POST /enterprise/expenses` | 以当前身份职级计算并创建报销流程 |
 | `POST /enterprise/payments/{request_id}/submit` | 预检并提交本人付款申请 |
-| `POST /enterprise/items/{item_id}/actions` | 审批、退回、补件、撤销、支付、入账或差异处理 |
+| `POST /enterprise/items/{item_id}/actions` | 审批、退回、补件、撤销、支付、入账或差异处理，返回下一处理人 |
+| `GET /enterprise/reconciliation/runs` | 查询最近对账批次及差异关闭进度 |
 | `POST /enterprise/reconciliation/runs` | 创建对账批次及差异事项 |
-| `POST /enterprise/assistant` | 企业权限下的统一只读助手 |
+| `POST /enterprise/assistant` | 企业权限下的统一只读助手与预填草稿 |
+| `POST /enterprise/assistant/stream` | SSE 工具进度与数字校验后的流式回答 |
+| `GET /enterprise/audit-events` | 审计权限下的智能体工具调用、原始问题与结果查询 |
 | `GET /enterprise/graph` | 查询权限范围内的确定性关系图谱 |
 | `GET /enterprise/admin-data` | 变更管理数据与前后快照 |
 | `POST /enterprise/changes/...` | 用户、供应商、预算和制度变更 |
@@ -289,7 +302,11 @@ python -m finance_platform.ingestion
    FINANCE_RETRIEVAL_MODE=vector
    FINANCE_EMBEDDING_MODEL=text-embedding-v2
    FINANCE_LLM_MODEL=qwen-plus
+   FINANCE_LLM_SMALL_MODEL=qwen-flash
+   FINANCE_LLM_FALLBACK_MODEL=qwen-flash
+   FINANCE_MODEL_ROUTING_ENABLED=true
    FINANCE_GENERATION_ENABLED=true
+   FINANCE_AGENT_ENABLED=true
    ```
 
 3. 构建统一向量索引并重启 API：
@@ -299,7 +316,7 @@ python -m finance_platform.ingestion
    python -m uvicorn api:app --host 127.0.0.1 --port 8000
    ```
 
-向量记录使用统一 `chunk_id`，Metadata 带版本、状态、权限和血缘字段。运行时还会读取 SQLite `document_states`，按当前或指定 `as_of` 日期过滤；待发布、归档和不在有效区间的版本不会混入回答。
+向量记录使用统一 `chunk_id`，Metadata 带版本、状态、权限和血缘字段。`vector_manifest.json` 记录 embedding 模型、切片数和构建时间，`/health` 同时返回索引是否存在及模型是否匹配。运行时还会读取 SQLite `document_states`，按当前或指定 `as_of` 日期过滤；待发布、归档和不在有效区间的版本不会混入回答。
 
 若存在 `models/BAAI--bge-reranker-v2-m3/snapshots/master`，且 `FINANCE_ENABLE_RERANK=true`，会加载本地 BGE 精排；不需要精排时设为 `false`。切换 Embedding 模型后必须重建 `chroma_db/unified`。无 Key、索引未构建或外部服务未验收时，应使用离线模式，不把降级结果描述为在线语义检索。
 
@@ -383,7 +400,7 @@ python mcp_server/test_mcp_client.py
 
 本次已实际完成：
 
-- **25 组自动化测试通过**：12 组原平台契约 + 13 组企业平台测试；覆盖语料与血缘、10 条制度金标准、权限与版本过滤、复杂付款、预算、120/120 对账、身份数据范围、职责分离、完整流程、退补、幂等、旧版本冲突、离职接管、主数据变更、图谱、企业 API、SQLite 连接释放和 Chroma 契约。
+- **51 组自动化测试通过**：12 组原平台契约 + 13 组企业平台 + 8 组 Agent + 9 组 Copilot + 5 组审计守卫 + 4 组流式路由；覆盖业务流程、权限、SQLite／Chroma 资源释放、工具调用、数字拦截、预填不写库、审计持久化、SSE 和模型路由。
 - **真实 MCP stdio 协议测试通过**：发现 6 个工具并完成 6 次协议调用；全量对账结果为 113 笔匹配、7 项差异。
 - **真实浏览器验收通过**：报销退补、PR-001 审批至关闭、PR-019 新建、CNY-OPER-002 对账及 BK-004 复核关闭、图谱与越权拦截、组织／供应商／预算／制度变更、新建报销和统一助手。
 - **桌面与 390px 手机布局验收通过**：逐页检查总览、业务、对账、图谱、变更管理和助手；正常操作无 JavaScript 错误，无横向溢出；弹窗按钮、Esc 和遮罩关闭可用。
@@ -391,11 +408,11 @@ python mcp_server/test_mcp_client.py
 
 必须保留的边界：
 
-- Chroma 自动化测试使用 `FakeEmbeddings`，只证明索引写入、读取、权限过滤和版本过滤契约，**不证明真实语义检索质量**。
-- DashScope 真实 Embedding、在线 Chroma 检索、BGE 精排和千问生成尚未用真实 Key 重新验收。
+- Chroma 自动化测试使用 `FakeEmbeddings`，证明索引契约；另已用百炼 `text-embedding-v2` 实际构建 101 条索引并完成在线语义查询，这不等同于完成企业真实语料质量评估。
+- 已实际验收 `qwen-flash` 生成和工具调用，以及主模型失败回退；当前账号的 `qwen-plus` 因额度限制未验证生成质量。BGE 精排仍未重新验收。
 - Dify 配套仓的旧 `/agent` 请求字段仍可进行基本只读联调；新 DSL 仍待实际 Dify 实例导入和运行验收。
 - LoRA 配套仓仅保留种子数据和校验脚本；未把新增数据写成已训练，也未产生新训练结果。
-- 浏览器验收是在开发沙箱完成，不等于每位使用者的 Windows 本地环境已验收。
+- 已在当前 Windows／Python 3.14 环境完成浏览器、流式预填和审计页面验收；其他部署环境仍需单独验证。
 
 ## 14. 目录结构
 
@@ -411,10 +428,14 @@ python mcp_server/test_mcp_client.py
 │   ├── changes.py            # 组织、供应商、预算和制度变更
 │   ├── graph.py              # SQLite 明确关系图谱
 │   ├── policy_search.py      # 离线／在线制度检索、权限和生效日期过滤
+│   ├── agent/                # OpenAI 兼容客户端、模型路由、白名单工具与 Tool Calling loop
+│   ├── copilot.py            # 离线分析、图表、报告与会话上下文
+│   ├── audit_trail.py        # 智能体工具问题、参数、结果与模型审计持久化
+│   ├── number_guard.py       # 终稿数字与工具证据一致性校验
 │   └── ...                   # 知识工程、场景规则、向量与数据服务
 ├── mcp_server/               # FastMCP Server 与真实 stdio 协议测试
 ├── scripts/                  # 合成语料、企业数据、业务库和向量库构建脚本
-├── tests/                    # 24 组自动化测试
+├── tests/                    # 51 组自动化测试
 ├── data/raw/                 # 合成 PDF、JSON、CSV 与文件证据
 ├── data/curated/             # parsed、cleaned、chunks、manifest
 ├── data/labels/              # 10 条制度检索金标准

@@ -4,10 +4,12 @@ from __future__ import annotations
 import os
 import re
 import threading
+import time
 import uuid
 from pathlib import Path
 from typing import Any
 
+from .audit_trail import AgentAuditTrail
 from .database import FinanceRepository
 from .ingestion import ROOT
 from .policy_search import PolicySearch
@@ -39,6 +41,7 @@ class UnifiedFinancePlatform:
         self.budget = BudgetService(self.data)
         self.reconciliation = ReconciliationService(self.data)
         self.travel = TravelService(self.data)
+        self.audit = AgentAuditTrail(self.data.db_path)
         self._pending: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
 
@@ -83,7 +86,8 @@ class UnifiedFinancePlatform:
             "travel": "差旅 住宿标准 伙食 市内交通 审批链",
         }[scenario]
         hits = self.policy.search(query, role, top_k=3)
-        trace.append({"step": "policy_retrieval", "mode": self.policy.mode, "hit_count": len(hits)})
+        trace.append({"step": "policy_retrieval", "mode": self.policy.last_search_mode,
+                      "fallback_reason": self.policy.fallback_reason, "hit_count": len(hits)})
         return self.policy._citations(hits)
 
     @staticmethod
@@ -259,32 +263,82 @@ class UnifiedFinancePlatform:
 
     def handle_enterprise(self, question: str, session_id: str) -> dict[str, Any]:
         """企业会话入口：身份、角色、职级和单据数据范围均从 SQLite 派生。"""
+        from .database import connect
         from .enterprise_database import EnterpriseRepository
         repository = EnterpriseRepository(self.data.db_path)
         identity = repository.identity(session_id)
-        scenario = self.route(question.strip())
+        original_question = question.strip()
+        scenario = self.route(original_question)
+        request_id = "REQ-" + uuid.uuid4().hex[:16].upper()
+        started = time.monotonic()
         if scenario == "travel":
             question = re.sub(r"普通员工|经理级|总监级", "", question) + f"，{identity['level']}"
         if scenario == "payment":
             match = REQUEST_ID_RE.search(question)
             if match:
-                request_id = match.group(0).upper()
-                request = self.data.payment_requests.get(request_id)
+                payment_id = match.group(0).upper()
+                request = self.data.payment_requests.get(payment_id)
                 finance_roles = {"finance_reviewer", "finance_bp", "finance_manager", "treasury", "accountant", "auditor"}
                 if request and not set(identity["roles"]) & finance_roles:
                     allowed = request["requester"] == identity["user_id"]
                     if not allowed:
-                        # 旧种子单的 requester 是合成占位值；统一事项中的申请人和
-                        # 部门数据范围才是企业会话的权限真源。
-                        from .database import connect
                         with connect(self.data.db_path) as conn:
                             item = conn.execute(
-                                "SELECT * FROM work_items WHERE scenario='payment' AND record_id=?", (request_id,)
+                                "SELECT * FROM work_items WHERE scenario='payment' AND record_id=?", (payment_id,)
                             ).fetchone()
                         allowed = bool(item and repository.can_view(identity, dict(item)))
                     if not allowed:
-                        raise PermissionError("只能查询本人发起或有财务权限的付款申请")
-        return self.handle(question, identity["knowledge_role"], session_id, legacy_writes=False)
+                        message = "只能查询本人发起或有财务权限的付款申请"
+                        self.audit.record(request_id=request_id, session_id=session_id, identity=identity,
+                                          question=original_question, tool_name="payment", arguments={"request_id": payment_id},
+                                          result=message, status="permission_denied", execution_mode="offline_rules", started_at=started)
+                        raise PermissionError(message)
+        try:
+            result = self.handle(question, identity["knowledge_role"], session_id, legacy_writes=False)
+        except PermissionError as exc:
+            self.audit.record(request_id=request_id, session_id=session_id, identity=identity,
+                              question=original_question, tool_name=scenario, arguments={},
+                              result=str(exc), status="permission_denied", execution_mode="offline_rules", started_at=started)
+            raise
+        except Exception as exc:
+            self.audit.record(request_id=request_id, session_id=session_id, identity=identity,
+                              question=original_question, tool_name=scenario, arguments={},
+                              result=str(exc), status="error", execution_mode="offline_rules", started_at=started)
+            raise
+        pending_action = None
+        if any(term in original_question for term in ACTION_TERMS + ("申请报销", "发起报销", "预填")):
+            if scenario == "travel" and result["data"].get("city"):
+                data = result["data"]
+                pending_action = {
+                    "type": "expense_draft", "view": "business", "title": "差旅报销预填草稿",
+                    "payload": {"city": data["city"], "days": int(data["days"]), "lodging_price": data["lodging_price"]},
+                    "preview": data, "requires_confirmation": True,
+                }
+            elif scenario == "payment":
+                match = REQUEST_ID_RE.search(original_question)
+                payment_id = match.group(0).upper() if match else ""
+                with connect(self.data.db_path) as conn:
+                    existing = conn.execute(
+                        "SELECT 1 FROM work_items WHERE scenario='payment' AND record_id=?", (payment_id,)
+                    ).fetchone()
+                if payment_id and not existing:
+                    pending_action = {
+                        "type": "payment_draft", "view": "business", "title": "合同付款预填草稿",
+                        "payload": {"request_id": payment_id}, "requires_confirmation": True,
+                    }
+        if pending_action:
+            result["pending_action"] = pending_action
+            result["human_confirmation_required"] = True
+            result["answer"] += "\n已生成只读预填草稿，不会自动建单；请在业务办理页面核对并确认。"
+        audit_id = self.audit.record(
+            request_id=request_id, session_id=session_id, identity=identity, question=original_question,
+            tool_name="prepare_action" if pending_action else scenario,
+            arguments=pending_action["payload"] if pending_action else {},
+            result=result["answer"], status=result["status"], execution_mode="offline_rules", started_at=started,
+        )
+        result["trace"].append({"step": "audit_persisted", "audit_id": audit_id})
+        result["data"]["audit_request_id"] = request_id
+        return result
 
     def handle_text(self, question: str, role: str = "employee") -> dict[str, Any]:
         return self.handle(question, role, session_id="legacy-text")

@@ -5,6 +5,7 @@ import json
 import sqlite3
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -168,6 +169,54 @@ def assignment_for(conn: sqlite3.Connection, status: str, created_by: str) -> tu
         return (row[0] if row else None), "department_manager"
     role = STATUS_ROLE.get(status)
     return (ROLE_ASSIGNEE.get(role or "") if role else None), role
+
+
+def workflow_steps(conn: sqlite3.Connection, item: dict[str, Any]) -> list[dict[str, Any]]:
+    if item["status"] == "cancelled":
+        return []
+    if item["scenario"] == "reconciliation":
+        specs = [
+            ("submit", "提交差异"), ("pending_accountant", "会计处理"),
+            ("pending_verification", "财务负责人复核"), ("closed", "关闭"),
+        ]
+    else:
+        specs = [("submit", "提交申请"), ("pending_department", "部门审批"), ("pending_finance_review", "财务初审")]
+        if item["requires_finance_manager"]:
+            specs.append(("pending_finance_manager", "财务负责人复核"))
+        specs.append(("pending_budget_manager" if item["status"] == "pending_budget_manager" else "pending_budget", "预算审批"))
+        specs.extend([("pending_payment", "模拟支付"), ("pending_accountant", "模拟入账"), ("closed", "关闭")])
+    current = "pending_accountant" if item["status"] == "paid" else item["status"]
+    if current == "needs_supplement":
+        return_status = item.get("return_to_status") or "pending_finance_review"
+        current_index = next((i for i, (status, _) in enumerate(specs) if status == return_status), 1)
+        specs.insert(current_index, ("needs_supplement", "补充材料"))
+        current = "needs_supplement"
+    current_index = next((i for i, (status, _) in enumerate(specs) if status == current), len(specs) - 1)
+    user_ids = {item["created_by"]}
+    for status, _ in specs:
+        assignee, _ = assignment_for(conn, status, item["created_by"]) if status not in {"submit", "closed"} else (item["created_by"] if status == "submit" else None, None)
+        if assignee:
+            user_ids.add(assignee)
+    names = {}
+    if user_ids:
+        placeholders = ",".join("?" for _ in user_ids)
+        names = {row["user_id"]: row["display_name"] for row in conn.execute(
+            f"SELECT user_id,display_name FROM users WHERE user_id IN ({placeholders})", tuple(user_ids)
+        )}
+    steps = []
+    for index, (status, label) in enumerate(specs):
+        if status == "submit":
+            assignee = item["created_by"]
+        elif status == "closed":
+            assignee = None
+        else:
+            assignee, _ = assignment_for(conn, status, item["created_by"])
+        state = "completed" if current == "closed" or index < current_index else "current" if index == current_index else "upcoming"
+        steps.append({
+            "status": status, "label": label, "state": state, "assignee_id": assignee,
+            "assignee_name": names.get(assignee) if assignee else None,
+        })
+    return steps
 
 
 def create_work_item(conn: sqlite3.Connection, *, scenario: str, record_id: str, title: str,
@@ -374,7 +423,11 @@ class EnterpriseRepository:
     def get_work_item(self, item_id: str, identity: dict[str, Any]) -> dict[str, Any]:
         from .database import connect
         with connect(self.db_path) as conn:
-            item = conn.execute("SELECT * FROM work_items WHERE item_id=?", (item_id,)).fetchone()
+            item = conn.execute(
+                """SELECT w.*,u.display_name AS creator_name,a.display_name AS assignee_name
+                   FROM work_items w JOIN users u ON u.user_id=w.created_by
+                   LEFT JOIN users a ON a.user_id=w.current_assignee WHERE w.item_id=?""", (item_id,)
+            ).fetchone()
             if not item:
                 raise KeyError("事项不存在")
             result = dict(item)
@@ -392,9 +445,16 @@ class EnterpriseRepository:
             )]
             reservation = conn.execute("SELECT * FROM budget_reservations WHERE item_id=?", (item_id,)).fetchone()
             result["budget_reservation"] = dict(reservation) if reservation else None
+            budget = conn.execute("SELECT * FROM budgets WHERE project_id=?", (result["project_id"],)).fetchone()
+            if budget:
+                available = Decimal(budget["annual_budget"]) - Decimal(budget["committed"]) - Decimal(budget["actual"]) - Decimal(budget["frozen"])
+                result["budget_summary"] = {key: budget[key] for key in ("project_id", "annual_budget", "committed", "actual", "frozen")}
+                result["budget_summary"]["available"] = format(available, ".2f")
             result["tasks"] = [dict(x) for x in conn.execute(
-                "SELECT * FROM tasks WHERE item_id=? ORDER BY created_at", (item_id,)
+                """SELECT t.*,u.display_name AS assignee_name FROM tasks t
+                   JOIN users u ON u.user_id=t.assignee_id WHERE t.item_id=? ORDER BY t.created_at""", (item_id,)
             )]
+            result["workflow_steps"] = workflow_steps(conn, result)
             result["attachments"] = [dict(x) for x in conn.execute(
                 "SELECT * FROM attachments WHERE record_id IN (?,?) ORDER BY attachment_id",
                 (result["record_id"], result.get("contract_id") or ""),

@@ -4,18 +4,33 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
 from .ingestion import ROOT, build_corpus
+from .llm_routing import model_for_question
 
 load_dotenv(ROOT / ".env")
 
 
 def vector_directory(root: Path = ROOT) -> Path:
     return root / "chroma_db" / "unified"
+
+
+def vector_status(root: Path = ROOT) -> dict[str, Any]:
+    directory = vector_directory(root)
+    current_model = os.getenv("FINANCE_EMBEDDING_MODEL", "text-embedding-v2")
+    status = {"ready": (directory / "chroma.sqlite3").exists(), "index_model": None,
+              "current_model": current_model, "model_matches": False}
+    manifest_path = directory / "vector_manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        status["index_model"] = manifest.get("embedding_model")
+        status["model_matches"] = status["index_model"] == current_model
+    return status
 
 
 def dashscope_embeddings():
@@ -102,16 +117,29 @@ class VectorKnowledgeBase:
             str(self.persist_dir.relative_to(self.root))
             if self.persist_dir.is_relative_to(self.root) else str(self.persist_dir)
         )
-        return {
+        embedding_model = getattr(self._embedding(), "model", os.getenv("FINANCE_EMBEDDING_MODEL", "text-embedding-v2"))
+        result = {
             "document_count": len({doc.metadata["document_id"] for doc in documents}),
             "chunk_count": len(documents), "vector_count": self.count(),
-            "persist_dir": persist_text,
+            "persist_dir": persist_text, "embedding_model": embedding_model,
         }
+        manifest = {**result, "created_at": datetime.now(timezone.utc).isoformat()}
+        self.persist_dir.mkdir(parents=True, exist_ok=True)
+        (self.persist_dir / "vector_manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        return result
 
     def load(self):
         if self._store is None:
             if not (self.persist_dir / "chroma.sqlite3").exists():
                 raise FileNotFoundError("统一向量库不存在，请先运行 python scripts/build_vector_store.py")
+            manifest_path = self.persist_dir / "vector_manifest.json"
+            if self.embeddings is None and manifest_path.exists():
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                current_model = os.getenv("FINANCE_EMBEDDING_MODEL", "text-embedding-v2")
+                if manifest.get("embedding_model") != current_model:
+                    raise RuntimeError(
+                        f"向量索引模型为 {manifest.get('embedding_model')}，当前配置为 {current_model}；请重建向量索引")
             from langchain_chroma import Chroma
 
             self._store = Chroma(
@@ -181,7 +209,7 @@ def generate_answer(question: str, hits: list[dict[str, Any]]) -> str:
 用户问题：{question}
 """
     llm = ChatOpenAI(
-        model=os.getenv("FINANCE_LLM_MODEL", "qwen-plus"),
+        model=model_for_question(question),
         base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         api_key=api_key, temperature=0.1,
     )

@@ -126,6 +126,16 @@
     .citation { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
     .citation:last-child { border-bottom: 0; }
     .citation code { display: block; color: var(--muted); font: 10px var(--font-data); overflow-wrap: anywhere; }
+    .flow-list { display: grid; gap: 8px; }
+    .flow-step { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
+    .flow-step.completed { border-color: var(--green-700); background: var(--green-100); color: var(--green-700); }
+    .flow-step.current { border-color: var(--accent); background: var(--teal-100); color: var(--ink); font-weight: 650; }
+    .flow-step small { flex: none; }
+    .message.assistant.has-evidence { cursor: pointer; border: 1px solid transparent; }
+    .message.assistant.has-evidence:hover, .message.assistant.has-evidence.selected { border-color: var(--accent); }
+    .snapshot-grid { display: grid; gap: 6px; margin: 10px 0; }
+    .snapshot-row { display: grid; grid-template-columns: minmax(100px,.6fr) minmax(0,1fr); gap: 8px; font-size: 12px; }
+    .snapshot-row small { color: var(--muted); overflow-wrap: anywhere; }
     .form-grid { display: grid; gap: 14px; }
     .form-grid.two { grid-template-columns: minmax(0, 1fr); }
     .form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
@@ -226,13 +236,14 @@
       <section class="view" id="view-business">
         <div class="page-head"><div><h2>业务办理</h2><p>先计算与校验，再进入审批；新流程不信任前端自报职级或角色。</p></div><span class="page-code">CONTROLLED WRITE</span></div>
         <div class="business-grid">
-          <div class="panel"><div class="panel-head"><h3>发起差旅报销</h3><span class="badge">费用计算 + 制度校验</span></div><div class="panel-body"><form class="form-grid" id="expense-form"><div class="form-grid two"><div class="field"><label for="expense-city">出差城市</label><select id="expense-city" required><option>北京</option><option>深圳</option><option>上海</option><option>成都</option><option>杭州</option><option>长沙</option></select></div><div class="field"><label for="expense-days">出差天数</label><input id="expense-days" type="number" min="1" max="30" value="3" required></div></div><div class="field"><label for="expense-price">住宿每晚单价（元）</label><input id="expense-price" type="number" min="0" step="0.01" value="450" required></div><div class="notice">住宿、伙食、交通由确定性规则计算；职级取当前登录用户。超标或五天以上行程会增加复核节点。</div><div class="form-actions"><button class="btn" type="submit">计算并提交审批</button></div></form></div></div>
+          <div class="panel"><div class="panel-head"><h3>发起差旅报销</h3><span class="badge">费用计算 + 制度校验</span></div><div class="panel-body"><form class="form-grid" id="expense-form"><div class="form-grid two"><div class="field"><label for="expense-city">出差城市</label><select id="expense-city" required><option>北京</option><option>深圳</option><option>上海</option><option>成都</option><option>杭州</option><option>长沙</option></select></div><div class="field"><label for="expense-days">出差天数</label><input id="expense-days" type="number" min="1" max="30" value="3" required></div></div><div class="field"><label for="expense-price">住宿每晚单价（元）</label><input id="expense-price" type="number" min="0" step="0.01" value="450" required></div><div class="notice">先由规则计算并展示费用，再由你确认提交。超标或五天以上行程会增加财务负责人复核。</div><div class="form-actions"><button class="btn" type="submit">计算并预览</button></div></form><div id="expense-preview" style="margin-top:14px"></div></div></div>
           <div class="panel"><div class="panel-head"><h3>提交合同付款</h3><span class="badge">合同 + 发票 + 验收</span></div><div class="panel-body"><form class="form-grid" id="payment-form"><div class="field"><label for="payment-request">本人可提交的付款申请</label><select id="payment-request" required></select></div><div class="notice">提交时执行合同状态、里程碑金额、供应商账户、发票、验收和风险预检。异常单进入退补，正常单进入审批。</div><div class="form-actions"><button class="btn" type="submit">预检并进入流程</button></div></form></div></div>
         </div>
       </section>
       <section class="view" id="view-reconciliation">
         <div class="page-head"><div><h2>银行对账中心</h2><p>按批次生成差异事项；会计处理、财务负责人复核后关闭，原始批次不被覆盖。</p></div><span class="page-code">120 BANK / 120 LEDGER</span></div>
         <div class="split"><div class="panel"><div class="panel-head"><h3>发起对账批次</h3><span class="badge">确定性匹配</span></div><div class="panel-body"><form class="form-grid" id="recon-form"><div class="field"><label for="recon-account">账户范围</label><select id="recon-account"><option value="">全部账户</option><option value="CNY-OPER-001">CNY-OPER-001</option><option value="CNY-OPER-002">CNY-OPER-002</option></select></div><div class="notice">匹配交易号、金额、币种、日期和账户；重复记录单独分类。每次运行生成独立批次和差异待办。</div><div class="form-actions" id="recon-actions"><button class="btn" type="submit">运行并生成差异事项</button></div></form><div id="recon-result" style="margin-top:14px"></div></div></div><div class="panel"><div class="panel-head"><h3>处理规则</h3></div><div class="panel-body"><ul class="help-list"><li>银行有、总账无：核查未入账或延迟入账。</li><li>总账有、银行无：核查银行未达或错误引用。</li><li>金额、币种、日期或账户不一致：进入差异工单。</li><li>处理说明与复核意见写入流程时间线，不静默改数。</li></ul></div></div></div>
+        <div class="panel" style="margin-top:16px"><div class="panel-head"><h3>历史对账批次</h3><span class="badge">最近 20 批</span></div><div class="panel-body" id="recon-history"><div class="empty">进入对账中心后加载历史批次。</div></div></div>
       </section>
       <section class="view" id="view-graph">
         <div class="page-head"><div><h2>业务关系图谱</h2><p>由数据库明确关系生成，用于解释风险与影响追溯，不负责金额计算。</p></div><span class="page-code">RELATION / EVIDENCE</span></div>
@@ -241,10 +252,11 @@
       <section class="view" id="view-admin">
         <div class="page-head"><div><h2>变更管理</h2><p>当前状态即时生效，变更前后快照、执行人和生效时间完整留痕。</p></div><span class="page-code">EFFECTIVE CHANGE</span></div>
         <div id="admin-content"><div class="empty">正在读取主数据…</div></div>
+        <div class="panel" style="margin-top:16px"><div class="panel-head"><h3>智能体审计日志</h3><button class="btn secondary small" id="audit-refresh" type="button">刷新</button></div><div class="panel-body" id="audit-content"><div class="empty">进入变更管理后加载工具调用记录。</div></div></div>
       </section>
       <section class="view" id="view-assistant">
         <div class="page-head"><div><h2>统一财务助手</h2><p>1 个编排入口调用知识、报销、付款和对账受控能力；业务写入请在对应表单或事项中完成。</p></div><span class="page-code">1 ORCHESTRATOR + 4 TOOLS</span></div>
-        <div class="split"><div class="panel"><div class="chat-log" id="chat-log"><div class="message assistant">我可以解释制度、预检单据和分析对账。审批、支付和入账请在工作台中按权限执行。</div></div><div class="panel-body"><div class="quick-questions"><button class="btn secondary small" data-question="普通员工在一类城市的住宿费用上限是多少">住宿费用上限</button><button class="btn secondary small" data-question="请预检付款申请 PR-002">预检 PR-002</button><button class="btn secondary small" data-question="执行对账分析 CNY-OPER-002">分析账户对账</button></div><form id="chat-form"><div class="field"><label for="chat-input">输入财务问题</label><textarea id="chat-input" required></textarea></div><div class="form-actions"><button class="btn accent" type="submit">发送给统一助手</button></div></form></div></div><div class="panel"><div class="panel-head"><h3>依据与执行轨迹</h3></div><div class="panel-body" id="chat-evidence"><div class="empty">提问后显示制度引用和受控工具轨迹。</div></div></div></div>
+        <div class="split"><div class="panel"><div class="chat-log" id="chat-log"><div class="message assistant">我可以解释制度、预检单据和分析对账。审批、支付和入账请在工作台中按权限执行。</div></div><div class="panel-body"><div class="quick-questions"><button class="btn secondary small" data-question="分析各部门预算执行情况，执行率超过85%的标红并生成图表">预算图表</button><button class="btn secondary small" data-question="统计各业务场景的事项数量和金额，按金额降序">场景统计</button><button class="btn secondary small" data-question="生成银行对账差异分析报告">对账报告</button><button class="btn secondary small" data-question="预审付款申请 PR-002 并生成风险报告">PR-002 风险</button><button class="btn secondary small" data-question="我下周去上海出差三天，酒店每晚600元，检查是否超标并告诉我怎么处理">差旅检查</button><button class="btn secondary small" data-question="普通员工在一类城市的住宿费用上限是多少">住宿费用上限</button><button class="btn secondary small" data-question="请预检付款申请 PR-002">预检 PR-002</button><button class="btn secondary small" data-question="执行对账分析 CNY-OPER-002">分析账户对账</button></div><div class="notice" id="assistant-role-hint" style="margin-bottom:10px"></div><div id="assistant-action" style="margin-bottom:10px"></div><form id="chat-form"><div class="field"><label for="chat-input">输入财务问题</label><textarea id="chat-input" required></textarea></div><div class="form-actions"><button class="btn accent" type="submit">发送给统一助手</button></div></form></div></div><div class="panel copilot-canvas" id="copilot-canvas" hidden><div class="panel-head"><h3>分析画布</h3><span class="badge" id="copilot-mode"></span></div><div class="panel-body"><div id="copilot-chart"></div><div class="form-actions" style="margin:10px 0"><button class="btn secondary small" id="copilot-download-svg" type="button">下载图表 SVG</button><button class="btn secondary small" id="copilot-download-report" type="button" disabled>下载完整 HTML 报告</button></div><h4>数据明细</h4><div id="copilot-detail"></div><h4>报告预览</h4><div id="copilot-report-preview"></div></div></div><div class="panel"><div class="panel-head"><h3>依据与执行轨迹</h3></div><div class="panel-body" id="chat-evidence"><div class="empty">提问后显示制度引用和受控工具轨迹。</div></div></div></div>
       </section>
     </main>
   </div>
@@ -253,14 +265,19 @@
 <div class="modal" id="action-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-window"><div class="modal-head"><h3 id="modal-title">流程操作</h3><button class="close-btn" id="modal-close" aria-label="关闭">×</button></div><form class="form-grid" id="action-form"><p class="notice" id="modal-description"></p><div class="field" id="supplement-fields"><label for="supplement-reference">材料编号或说明</label><input id="supplement-reference" placeholder="例如 SUP-PDF-001"></div><div class="field"><label for="action-comment">处理意见</label><textarea id="action-comment" placeholder="退回、差异处理时必须填写"></textarea></div><div class="form-actions"><button class="btn" type="submit" id="action-submit">确认执行</button><button class="btn secondary" type="button" id="modal-cancel">取消</button></div></form></div></div>
 <script>
 'use strict';
-const state = { users: [], sessionId: localStorage.getItem('finance_session') || '', identity: null, workspace: null, queue: 'tasks', selected: null, action: null, actionKey: '', admin: null };
+const state = { users: [], sessionId: localStorage.getItem('finance_session') || '', identity: null, workspace: null, queue: 'tasks', selected: null, action: null, actionKey: '', admin: null, expensePreview: null, chatUserId: '', assistantAction: null };
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const money = (value) => Number(value || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const scenarioNames = {expense: '费用报销', payment: '合同付款', reconciliation: '银行对账'};
-const findingNames = {amount_mismatch:'金额差异',missing_in_ledger:'总账缺失',missing_in_bank:'银行未达',duplicate_bank_record:'银行流水重复',duplicate_ledger_record:'总账记录重复',currency_mismatch:'币种差异',date_mismatch:'日期差异',account_mismatch:'账户差异'};
-const statusNames = {draft:'草稿',pending_department:'待部门审批',pending_finance_review:'待财务初审',pending_finance_manager:'待财务负责人',pending_budget:'待预算审批',pending_budget_manager:'待预算负责人',pending_payment:'待模拟支付',paid:'待会计入账',needs_supplement:'待补充材料',pending_accountant:'待会计处理',pending_verification:'待复核',closed:'已关闭',cancelled:'已撤销'};
-const actionNames = {approve:'审批通过',return:'退回补件',pay:'模拟支付',post:'模拟入账',resolve:'提交差异处理',supplement:'提交补件',cancel:'撤销申请'};
+const findingNames = {amount_mismatch:'金额差异',missing_in_ledger:'总账缺失',missing_in_bank:'银行未达',duplicate_bank_record:'银行流水重复',duplicate_ledger_record:'总账记录重复',currency_mismatch:'币种差异',date_mismatch:'日期差异',account_mismatch:'账户差异',lodging_overlimit:'住宿超标',returned_for_supplement:'退回补件',missing_acceptance:'缺少验收单',vendor_inactive:'供应商状态异常'};
+const statusNames = {draft:'草稿',pending_department:'待部门审批',pending_finance_review:'待财务初审',pending_finance_manager:'待财务负责人',pending_budget:'待预算审批',pending_budget_manager:'待预算负责人',pending_payment:'待模拟支付',paid:'待会计入账',needs_supplement:'待补充材料',pending_accountant:'待会计处理',pending_verification:'待复核',closed:'已关闭',cancelled:'已撤销',open:'待处理',done:'已完成',reserved:'已冻结',released:'已释放',consumed:'已核销',posted:'已入账',simulated_success:'模拟成功',resolved:'已解决',active:'生效',frozen:'冻结',inactive:'停用',suspended:'暂停',pending:'待发布',archived:'已归档',superseded:'已被新版替代',terminated:'已停用',success:'成功',error:'失败',completed:'已完成',permission_denied:'权限拦截',guard_blocked:'数字校验拦截',not_found:'未找到',forbidden:'权限拦截',needs_review:'需复核',pass:'通过'};
+const actionNames = {approve:'审批通过',return:'退回补件',pay:'模拟支付',post:'模拟入账',resolve:'提交差异处理',supplement:'提交补件',cancel:'撤销申请',submit:'提交申请',reassign:'待办转交'};
+const graphTypeNames = {user:'用户',vendor:'供应商',contract:'合同',expense:'报销单',budget:'预算项目',milestone:'里程碑',payment_request:'付款申请',invoice:'发票',acceptance:'验收单',work_item:'统一事项',payment:'模拟支付',voucher:'会计凭证',bank:'银行流水',ledger:'总账记录'};
+function formatTime(value) { if (!value) return '—'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; const pad = n => String(n).padStart(2,'0'); return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`; }
+function personName(userId) { return state.users.find(x => x.user_id === userId)?.display_name || userId || '无'; }
+function personLabel(userId, name) { const display = name || personName(userId); return userId ? `${display}（${userId}）` : '无'; }
+function nextAssigneeText(item) { return item.assignee_name ? `下一处理人：${item.assignee_name}（${item.current_assignee}）` : item.status === 'closed' ? '流程已关闭' : '当前无待处理人'; }
 async function api(path, options = {}) {
   const response = await fetch(path, {headers: {'Content-Type':'application/json', ...(options.headers || {})}, ...options});
   const data = await response.json().catch(() => ({}));
@@ -282,6 +299,16 @@ function renderIdentity() {
   if (!admin && document.querySelector('[data-view="admin"]').classList.contains('active')) showView('overview');
   const canRecon = id.roles.some(x => ['accountant','finance_manager'].includes(x));
   $('recon-actions').classList.toggle('hidden', !canRecon);
+  if (!canRecon) $('recon-form').querySelector('.notice').textContent = '当前角色仅可查看页面；运行对账批次请切换罗会或何谨。';
+  const financeRoles = ['finance_reviewer','finance_bp','finance_manager','treasury','accountant','auditor'];
+  const canPayment = id.user_id === 'U-EMP-003' || id.roles.some(x => financeRoles.includes(x));
+  document.querySelectorAll('[data-question]').forEach(button => {
+    const isPayment = button.dataset.question.includes('PR-002');
+    const isRecon = button.dataset.question.includes('对账分析');
+    button.disabled = (isPayment && !canPayment) || (isRecon && !canRecon);
+    button.title = button.disabled ? (isPayment ? 'PR-002 请切换周宁，或使用有财务权限的用户' : '对账分析请切换罗会或何谨') : '';
+  });
+  $('assistant-role-hint').textContent = `当前用户：${id.display_name}。制度问题可直接提问；PR-002 由周宁或财务角色查询，账户对账由罗会或何谨分析。点击左侧回答可查看对应依据。`;
 }
 function renderMetrics() {
   const s = state.workspace.summary;
@@ -309,7 +336,7 @@ function businessRows(item) {
   const fields = item.scenario === 'expense' ? [
     ['出差城市', b.city], ['天数', b.days], ['职级', b.level], ['住宿单价', b.lodging_price], ['住宿合计', b.lodging_total], ['伙食', b.meal_total], ['市内交通', b.transport_total], ['超标金额', b.overlimit_amount]
   ] : item.scenario === 'payment' ? [
-    ['合同', b.contract_id], ['合同名称', b.contract_title], ['供应商', b.vendor_name], ['供应商状态', b.vendor_status], ['风险等级', b.risk_level], ['里程碑', b.milestone_code], ['发票', b.invoice_id || '无'], ['验收单', b.acceptance_id || '无']
+    ['合同', b.contract_id], ['合同名称', b.contract_title], ['合同总额', b.contract_amount], ['供应商', b.vendor_name], ['供应商状态', statusNames[b.vendor_status] || b.vendor_status], ['风险等级', {high:'高风险',medium:'中风险',low:'低风险',normal:'正常'}[b.risk_level] || b.risk_level], ['里程碑', b.milestone_code], ['发票', b.invoice_id || '无'], ['验收单', b.acceptance_id || '无']
   ] : [['差异记录', item.record_id], ['处理要求', '会计处理后由财务负责人复核']];
   return fields.filter(x => x[1] !== undefined && x[1] !== null).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('');
 }
@@ -317,24 +344,36 @@ function renderDetail() {
   const item = state.selected;
   if (!item) { $('detail-panel').innerHTML = '<div class="detail-empty">选择一条事项，查看单据、预算、附件与完整流程。</div>'; return; }
   const actions = (item.allowed_actions || []).map(action => `<button class="btn ${['return','cancel'].includes(action) ? 'danger' : action === 'approve' ? '' : 'secondary'}" data-action="${action}">${esc(actionNames[action])}</button>`).join('');
-  const reservation = item.budget_reservation ? `<div class="notice">预算预留 ${esc(item.budget_reservation.reservation_id)}：¥ ${money(item.budget_reservation.amount)}，状态 ${esc(item.budget_reservation.status)}</div>` : '<div class="notice">尚未产生预算预留；进入预算节点时按可用余额冻结。</div>';
-  const exceptions = (item.exceptions || []).length ? item.exceptions.map(x => `<div class="notice ${x.status !== 'resolved' ? 'issue' : ''}"><strong>${esc(x.code)}</strong><br>${esc(x.message)}<br><small>${esc(x.status)}${x.resolution_note ? ' · ' + esc(x.resolution_note) : ''}</small></div>`).join('') : '<div class="empty">无异常记录</div>';
+  const currentNotice = item.current_assignee ? `当前节点：${statusNames[item.status] || item.status}｜当前处理人：${personLabel(item.current_assignee, item.assignee_name)}` : `当前状态：${statusNames[item.status] || item.status}，无待处理人`;
+  const flowStateNames = {completed: '已完成', current: '当前节点', upcoming: '未到达'};
+  const flow = (item.workflow_steps || []).map(step => `<div class="flow-step ${esc(step.state)}"><span>${esc(step.label)}｜${esc(step.assignee_id ? personLabel(step.assignee_id, step.assignee_name) : '系统')}</span><small>${esc(flowStateNames[step.state])}</small></div>`).join('');
+  const reservation = item.budget_reservation ? `<div class="notice">预算预留 ${esc(item.budget_reservation.reservation_id)}：¥ ${money(item.budget_reservation.amount)}｜${esc(statusNames[item.budget_reservation.status] || item.budget_reservation.status)}</div>` : '<div class="notice">尚未产生预算预留；进入预算节点时按可用余额冻结。</div>';
+  const b = item.budget_summary;
+  const budget = b ? `<dl class="kv" style="margin-top:10px"><dt>年度预算</dt><dd>¥ ${money(b.annual_budget)}</dd><dt>已承诺</dt><dd>¥ ${money(b.committed)}</dd><dt>已发生</dt><dd>¥ ${money(b.actual)}</dd><dt>已冻结</dt><dd>¥ ${money(b.frozen)}</dd><dt>当前可用</dt><dd class="money">¥ ${money(b.available)}</dd></dl><small>当前可用已包含本单最新冻结状态。</small>` : '';
+  const exceptions = (item.exceptions || []).length ? item.exceptions.map(x => `<div class="notice ${x.status !== 'resolved' ? 'issue' : ''}"><strong>${esc(findingNames[x.code] || x.code)}</strong><br>${esc(x.message)}<br><small>${esc(statusNames[x.status] || x.status)}${x.resolution_note ? ' · ' + esc(x.resolution_note) : ''}</small></div>`).join('') : '<div class="empty">无异常记录</div>';
   const attachments = (item.attachments || []).length ? item.attachments.map(x => `<div class="citation"><strong>${esc(x.type)} · ${esc(x.attachment_id)}</strong><code>${esc(x.path)}<br>SHA256 ${esc(x.sha256)}</code></div>`).join('') : '<div class="empty">无登记附件</div>';
-  const payments = [...(item.payments || []).map(x => `<div class="notice">模拟支付 ${esc(x.reference_no)} · ¥ ${money(x.amount)} · ${esc(x.status)}</div>`), ...(item.vouchers || []).map(x => `<div class="notice">模拟凭证 ${esc(x.voucher_id)} · ¥ ${money(x.amount)} · ${esc(x.status)}</div>`)].join('');
-  const events = (item.events || []).map(x => `<li><strong>${esc(x.actor_name)} · ${esc(actionNames[x.action] || x.action)}</strong><br>${esc(statusNames[x.from_status] || x.from_status)} → ${esc(statusNames[x.to_status] || x.to_status)}${x.comment ? '<br>' + esc(x.comment) : ''}<span class="timeline-meta">${esc(x.created_at)}</span></li>`).join('');
+  const payments = [...(item.payments || []).map(x => `<div class="notice">模拟支付 ${esc(x.reference_no)} · ¥ ${money(x.amount)} · ${esc(statusNames[x.status] || x.status)}</div>`), ...(item.vouchers || []).map(x => `<div class="notice">模拟凭证 ${esc(x.voucher_id)} · ¥ ${money(x.amount)} · ${esc(statusNames[x.status] || x.status)}</div>`)].join('');
+  const tasks = (item.tasks || []).map(x => `<div class="data-row"><strong>${esc(personLabel(x.assignee_id, x.assignee_name))}</strong><small>${esc(statusNames[x.status] || x.status)}｜创建 ${esc(formatTime(x.created_at))}${x.completed_at ? '｜完成 ' + esc(formatTime(x.completed_at)) : ''}</small></div>`).join('');
+  const events = (item.events || []).map(x => `<li><strong>${esc(x.actor_name)} · ${esc(actionNames[x.action] || x.action)}</strong><br>${esc(statusNames[x.from_status] || x.from_status)} → ${esc(statusNames[x.to_status] || x.to_status)}${x.comment ? '<br>' + esc(x.comment) : ''}<span class="timeline-meta">${esc(formatTime(x.created_at))}</span></li>`).join('');
   const citations = (item.current_policy_citations || []).map(x => `<div class="citation"><strong>${esc(x.title)} V${esc(x.version)}</strong><code>${esc(x.document_id)} · ${esc(x.chunk_id)} · 生效 ${esc(x.effective_date)}</code></div>`).join('');
   $('detail-panel').innerHTML = `<div class="detail-section"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h3 class="detail-title">${esc(item.title)}</h3><p class="detail-sub">${esc(item.item_id)} · ${esc(item.record_id)}</p></div>${statusBadge(item.status)}</div></div>
-  <div class="detail-section"><dl class="kv"><dt>业务场景</dt><dd>${esc(scenarioNames[item.scenario])}</dd><dt>金额</dt><dd class="money">¥ ${money(item.amount)}</dd><dt>申请人</dt><dd>${esc(item.created_by)}</dd><dt>当前处理人</dt><dd>${esc(item.current_assignee || '无')}</dd><dt>预算项目</dt><dd>${esc(item.project_id)}</dd><dt>制度快照</dt><dd>${esc(item.policy_version)}</dd><dt>乐观版本</dt><dd>V${item.version}</dd></dl></div>
+  <div class="detail-section"><div class="notice">${esc(currentNotice)}</div></div>
+  <div class="detail-section"><h4>完整流程</h4><div class="flow-list">${flow || '<div class="empty">流程已撤销</div>'}</div></div>
+  <div class="detail-section"><dl class="kv"><dt>业务场景</dt><dd>${esc(scenarioNames[item.scenario])}</dd><dt>金额</dt><dd class="money">¥ ${money(item.amount)}</dd><dt>申请人</dt><dd>${esc(personLabel(item.created_by, item.creator_name))}</dd><dt>当前处理人</dt><dd>${esc(item.current_assignee ? personLabel(item.current_assignee, item.assignee_name) : '无')}</dd><dt>预算项目</dt><dd>${esc(item.project_id)}</dd><dt>制度快照</dt><dd>${esc(item.policy_version)}</dd><dt>乐观版本</dt><dd>V${item.version}</dd></dl></div>
   <div class="detail-section"><h4>单据信息</h4><dl class="kv">${businessRows(item)}</dl></div>
-  ${actions ? `<div class="detail-section"><h4>当前可执行动作</h4><div class="action-grid">${actions}</div></div>` : ''}
-  <div class="detail-section"><h4>预算联动</h4>${reservation}${payments}</div>
+  <div class="detail-section"><h4>${actions ? '当前可执行动作' : '当前处理说明'}</h4>${actions ? `<div class="action-grid">${actions}</div>` : `<div class="notice">${esc(currentNotice)}${['closed','cancelled'].includes(item.status) ? '' : '，你无需操作'}</div>`}</div>
+  <div class="detail-section"><h4>预算联动</h4>${reservation}${budget}${payments}</div>
   <div class="detail-section"><h4>异常与处理</h4>${exceptions}</div>
   <div class="detail-section"><h4>附件证据</h4>${attachments}</div>
   <div class="detail-section"><h4>当前制度依据</h4>${citations || '<div class="empty">未检索到当前条款</div>'}</div>
+  <div class="detail-section"><h4>任务流转记录</h4><div class="data-list">${tasks || '<div class="empty">暂无任务记录</div>'}</div></div>
   <div class="detail-section"><h4>流程时间线</h4><ol class="timeline">${events}</ol></div>`;
 }
 async function openItem(itemId) {
-  try { state.selected = await api(`/enterprise/items/${encodeURIComponent(itemId)}?session_id=${encodeURIComponent(state.sessionId)}`); renderDetail(); renderQueue(); }
+  try {
+    state.selected = await api(`/enterprise/items/${encodeURIComponent(itemId)}?session_id=${encodeURIComponent(state.sessionId)}`);
+    localStorage.setItem('finance_selected_item', itemId); renderDetail(); renderQueue();
+  }
   catch (error) { toast(error.message, true); }
 }
 async function loadWorkspace() {
@@ -342,9 +381,10 @@ async function loadWorkspace() {
   state.identity = state.workspace.identity;
   localStorage.setItem('finance_session', state.sessionId);
   renderIdentity(); renderMetrics(); renderQueue(); renderPaymentOptions();
+  if (state.chatUserId !== state.identity.user_id) loadChatHistory();
   if (state.selected) {
     const still = state.workspace.visible_items.some(x => x.item_id === state.selected.item_id);
-    if (still) await openItem(state.selected.item_id); else { state.selected = null; renderDetail(); }
+    if (still) await openItem(state.selected.item_id); else { state.selected = null; localStorage.removeItem('finance_selected_item'); renderDetail(); }
   }
 }
 async function switchUser(userId) {
@@ -352,15 +392,19 @@ async function switchUser(userId) {
   try {
     const sessionId = 'web-' + crypto.randomUUID();
     await api('/enterprise/session', {method:'POST', body:JSON.stringify({user_id:userId, session_id:sessionId})});
-    state.sessionId = sessionId; state.selected = null; state.admin = null;
-    await loadWorkspace(); renderDetail(); toast(`已进入${state.identity.display_name}的工作台`);
+    state.sessionId = sessionId; state.selected = null; state.admin = null; state.expensePreview = null;
+    localStorage.removeItem('finance_selected_item');
+    $('expense-form').reset(); $('expense-preview').innerHTML = ''; $('recon-result').innerHTML = '';
+    await loadWorkspace(); renderDetail(); showView('overview'); toast(`已进入${state.identity.display_name}的工作台`);
   } catch (error) { toast(error.message, true); }
   finally { setBusy(button, false); }
 }
 function showView(name) {
   document.querySelectorAll('.view').forEach(x => x.classList.toggle('active', x.id === `view-${name}`));
   document.querySelectorAll('.nav-button').forEach(x => x.classList.toggle('active', x.dataset.view === name));
+  localStorage.setItem('finance_view', name);
   if (name === 'admin') loadAdmin();
+  if (name === 'reconciliation') loadReconciliationHistory();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
@@ -368,7 +412,6 @@ document.querySelectorAll('[data-queue]').forEach(button => button.addEventListe
 $('scenario-filter').addEventListener('change', renderQueue);
 $('item-list').addEventListener('click', event => { const row = event.target.closest('[data-item-id]'); if (row) openItem(row.dataset.itemId); });
 $('switch-user').addEventListener('click', () => switchUser($('user-select').value));
-$('user-select').addEventListener('change', () => switchUser($('user-select').value));
 </script>
 <script>
 function openAction(action) {
@@ -397,15 +440,31 @@ $('action-form').addEventListener('submit', async event => {
       session_id:state.sessionId, action, expected_version:state.selected.version, idempotency_key:state.actionKey,
       comment, payload:action === 'supplement' ? {reference, material_type:'补充材料'} : {}
     })});
-    closeModal(); await loadWorkspace(); await openItem(result.item_id); toast(`${actionNames[action]}完成，事项进入${statusNames[result.status] || result.status}`);
+    closeModal(); await loadWorkspace(); await openItem(result.item_id); toast(`${actionNames[action]}完成，${nextAssigneeText(result)}`);
   } catch (error) { toast(error.message, true); if (error.message.includes('版本')) { await loadWorkspace(); closeModal(); } }
   finally { setBusy(button, false); }
 });
+function expensePayload() { return {session_id:state.sessionId, city:$('expense-city').value, days:Number($('expense-days').value), lodging_price:$('expense-price').value}; }
+$('expense-form').addEventListener('input', () => { state.expensePreview = null; $('expense-preview').innerHTML = ''; });
 $('expense-form').addEventListener('submit', async event => {
-  event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true);
+  event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true, '正在计算…');
   try {
-    const item = await api('/enterprise/expenses', {method:'POST', body:JSON.stringify({session_id:state.sessionId, city:$('expense-city').value, days:Number($('expense-days').value), lodging_price:$('expense-price').value})});
-    await loadWorkspace(); state.selected = item; showView('overview'); renderDetail(); toast(`报销 ${item.record_id} 已提交，金额 ¥${money(item.amount)}`);
+    const payload = expensePayload();
+    const preview = await api('/enterprise/expenses/precheck', {method:'POST', body:JSON.stringify(payload)});
+    state.expensePreview = {preview, payload};
+    const findings = (preview.findings || []).map(x => `<div class="notice issue">${esc(x.message)}</div>`).join('');
+    const flow = (preview.workflow_steps || []).map(x => x.assignee_name || '系统').join(' → ');
+    $('expense-preview').innerHTML = `<div class="panel"><div class="panel-head"><h3>提交前确认</h3>${preview.status === 'pass' ? '<span class="status done">预检通过</span>' : '<span class="status issue">需人工复核</span>'}</div><div class="panel-body"><dl class="kv"><dt>住宿</dt><dd>¥ ${money(preview.lodging_total)}（${preview.nights} 晚）</dd><dt>伙食</dt><dd>¥ ${money(preview.meal_total)}</dd><dt>市内交通</dt><dd>¥ ${money(preview.transport_total)}</dd><dt>合计</dt><dd class="money">¥ ${money(preview.total_amount)}</dd><dt>超标金额</dt><dd>¥ ${money(preview.overlimit_amount)}</dd></dl>${findings}<div class="notice" style="margin-top:10px">完整流程：${esc(flow)}</div><div class="form-actions"><button class="btn" id="confirm-expense" type="button">确认并提交给${esc(preview.next_step.assignee_name)}</button></div></div></div>`;
+  } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
+});
+$('expense-preview').addEventListener('click', async event => {
+  const button = event.target.closest('#confirm-expense'); if (!button || !state.expensePreview) return;
+  setBusy(button, true, '正在提交…');
+  try {
+    const item = await api('/enterprise/expenses', {method:'POST', body:JSON.stringify(state.expensePreview.payload)});
+    state.expensePreview = null; $('expense-preview').innerHTML = ''; state.selected = item;
+    localStorage.setItem('finance_selected_item', item.item_id);
+    await loadWorkspace(); showView('overview'); renderDetail(); toast(`报销 ${item.record_id} 已提交，${nextAssigneeText(item)}`);
   } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
 });
 $('payment-form').addEventListener('submit', async event => {
@@ -413,33 +472,156 @@ $('payment-form').addEventListener('submit', async event => {
   const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true);
   try {
     const item = await api(`/enterprise/payments/${encodeURIComponent(requestId)}/submit`, {method:'POST', body:JSON.stringify({session_id:state.sessionId})});
-    await loadWorkspace(); state.selected = item; showView('overview'); renderDetail(); toast(`${requestId} 已完成预检并进入${statusNames[item.status]}`);
+    state.selected = item; localStorage.setItem('finance_selected_item', item.item_id);
+    await loadWorkspace(); showView('overview'); renderDetail(); toast(`${requestId} 已完成预检，${nextAssigneeText(item)}`);
   } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
 });
+function renderReconciliationHistory(runs) {
+  $('recon-history').innerHTML = runs.length ? `<div class="data-list">${runs.map(run => `<div class="data-row"><strong>${esc(run.run_id)}｜${esc(run.account_id === 'all' ? '全部账户' : run.account_id)}</strong><small>匹配 ${run.matched_count} 笔｜差异 ${run.difference_count} 项｜已关闭 ${run.closed_count}/${run.item_count}｜${esc(run.creator_name)}｜${esc(formatTime(run.created_at))}</small></div>`).join('')}</div>` : '<div class="empty">暂无对账批次。</div>';
+}
+async function loadReconciliationHistory() {
+  try { renderReconciliationHistory(await api(`/enterprise/reconciliation/runs?session_id=${encodeURIComponent(state.sessionId)}`)); }
+  catch (error) { $('recon-history').innerHTML = `<div class="empty">${esc(error.message)}</div>`; }
+}
 $('recon-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setBusy(button, true, '正在匹配…');
   try {
     const result = await api('/enterprise/reconciliation/runs', {method:'POST', body:JSON.stringify({session_id:state.sessionId, account_id:$('recon-account').value || null})});
     const a = result.analysis;
-    $('recon-result').innerHTML = `<div class="notice"><strong>${esc(result.run_id)}</strong><br>匹配 ${a.matched_count} 笔，差异 ${a.difference_count} 项；银行 ${a.bank_record_count} 条，总账 ${a.ledger_record_count} 条。</div><div class="graph-node-list">${result.item_ids.map(id => `<button class="btn secondary small" data-recon-item="${esc(id)}">处理 ${esc(id.slice(0,18))}…</button>`).join('')}</div>`;
-    await loadWorkspace(); toast('对账批次和差异待办已生成');
+    const items = result.items || result.item_ids.map(id => ({item_id:id, record_id:id, message:'差异事项'}));
+    $('recon-result').innerHTML = `<div class="notice"><strong>${esc(result.run_id)}</strong><br>匹配 ${a.matched_count} 笔，差异 ${a.difference_count} 项；银行 ${a.bank_record_count} 条，总账 ${a.ledger_record_count} 条。</div><div class="graph-node-list">${items.map(item => `<button class="btn secondary small" data-recon-item="${esc(item.item_id)}">${esc(item.record_id)}｜${esc(item.message)}</button>`).join('')}</div>`;
+    await loadWorkspace(); await loadReconciliationHistory(); toast('对账批次和差异待办已生成');
   } catch (error) { toast(error.message, true); } finally { setBusy(button, false); }
 });
 $('recon-result').addEventListener('click', event => { const button = event.target.closest('[data-recon-item]'); if (button) { showView('overview'); openItem(button.dataset.reconItem); } });
-function addMessage(kind, text) { const node = document.createElement('div'); node.className = `message ${kind}`; node.textContent = text; $('chat-log').appendChild(node); $('chat-log').scrollTop = $('chat-log').scrollHeight; }
+function addMessage(kind, text, result = null) {
+  const node = document.createElement('div'); node.className = `message ${kind}`; node.textContent = text;
+  if (result) { node._chatResult = result; node.classList.add('has-evidence'); node.tabIndex = 0; node.title = '点击查看这条回答的依据与执行轨迹'; }
+  $('chat-log').appendChild(node); $('chat-log').scrollTop = $('chat-log').scrollHeight; return node;
+}
+function selectChatMessage(node) {
+  document.querySelectorAll('#chat-log .message.assistant').forEach(x => x.classList.remove('selected'));
+  if (node?._chatResult) { node.classList.add('selected'); renderCopilot(node._chatResult); renderChatEvidence(node._chatResult); }
+}
+function chatStorageKey() { return `finance_chat_${state.identity?.user_id || 'guest'}`; }
+function readChatEntries() {
+  try { const entries = JSON.parse(localStorage.getItem(chatStorageKey()) || '[]'); return Array.isArray(entries) ? entries : []; }
+  catch { return []; }
+}
+function loadChatHistory() {
+  state.chatUserId = state.identity.user_id; $('chat-log').innerHTML = '';
+  const entries = readChatEntries(); let latest = null;
+  if (!entries.length) {
+    addMessage('assistant', '我可以解释制度、预检单据和分析对账。审批、支付和入账请在工作台中按权限执行。');
+    $('chat-evidence').innerHTML = '<div class="empty">提问后显示制度引用和受控工具轨迹。</div>';
+    $('copilot-canvas').hidden = true; renderPendingAction(null); return;
+  }
+  entries.forEach(entry => { addMessage('user', entry.question); latest = addMessage('assistant', entry.answer, entry.result); });
+  selectChatMessage(latest);
+}
+function saveChatEntry(question, result) {
+  const entries = readChatEntries();
+  entries.push({question, answer:result.answer, result:{citations:result.citations || [], trace:result.trace || [], data:result.data || {}, pending_action:result.pending_action || null}});
+  try { localStorage.setItem(chatStorageKey(), JSON.stringify(entries.slice(-20))); } catch { }
+}
+function renderPendingAction(action) {
+  state.assistantAction = action || null;
+  if (!action) { $('assistant-action').innerHTML = ''; return; }
+  const expense = action.type === 'expense_draft';
+  const summary = expense ? `${action.payload.city}｜${action.payload.days} 天｜住宿 ¥${money(action.payload.lodging_price)}` : action.payload.request_id;
+  $('assistant-action').innerHTML = `<div class="notice"><strong>${esc(action.title || '预填草稿')}</strong><br>${esc(summary)}<br>尚未写入业务库。请先在表单中核对，再由你确认提交。<div class="form-actions"><button class="btn accent small" id="prefill-draft" type="button">填入表单并预览</button></div></div>`;
+}
+$('assistant-action').addEventListener('click', event => {
+  const button = event.target.closest('#prefill-draft'); if (!button || !state.assistantAction) return;
+  const action = state.assistantAction;
+  showView('business');
+  if (action.type === 'expense_draft') {
+    $('expense-city').value = action.payload.city; $('expense-days').value = action.payload.days; $('expense-price').value = action.payload.lodging_price;
+    $('expense-form').requestSubmit(); toast('助手草稿已预填，请核对预览后确认提交');
+  } else if (action.type === 'payment_draft') {
+    const option = [...$('payment-request').options].find(x => x.value === action.payload.request_id);
+    if (!option) { toast('该付款申请不可提交或已进入流程', true); return; }
+    $('payment-request').value = action.payload.request_id; toast('助手草稿已预填，请核对后点击预检并进入流程');
+  }
+});
 function renderChatEvidence(result) {
   const citations = (result.citations || []).map(x => `<div class="citation"><strong>${esc(x.title)} V${esc(x.version)}</strong><code>${esc(x.document_id)} · ${esc(x.chunk_id)}</code></div>`).join('');
   const trace = (result.trace || []).map(x => `<div class="data-row"><strong>${esc(x.step)}</strong><small>${esc(JSON.stringify(x))}</small></div>`).join('');
   const findings = (result.data?.findings || []).map(x => `<div class="notice issue">${esc(x.message || findingNames[x.code] || x.code)}${x.record_id ? `<br><small>${esc(x.record_id)}</small>` : ''}</div>`).join('');
   $('chat-evidence').innerHTML = `${findings}<h4>制度引用</h4>${citations || '<div class="empty">无引用</div>'}<h4>执行轨迹</h4><div class="data-list">${trace}</div>`;
+  renderPendingAction(result.pending_action);
+}
+const copilotState = { svg: '', report: '', title: 'chart' };
+function renderCopilot(result) {
+  const d = result && result.data;
+  if (!d || !d.copilot) { $('copilot-canvas').hidden = true; return; }
+  $('copilot-canvas').hidden = false;
+  $('copilot-mode').textContent = d.execution_mode || '';
+  $('copilot-chart').innerHTML = (d.chart && d.chart.svg) ? d.chart.svg : '<div class="empty">本次分析未生成图表</div>';
+  copilotState.svg = (d.chart && d.chart.svg) || '';
+  copilotState.title = (d.chart && d.chart.title) || 'chart';
+  copilotState.report = d.report_html || '';
+  $('copilot-download-report').disabled = !d.report_html;
+  const det = d.detail || { columns: [], rows: [] };
+  $('copilot-detail').innerHTML = det.columns.length
+    ? `<table><thead><tr>${det.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${det.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    : '<div class="empty">无明细数据</div>';
+  $('copilot-report-preview').innerHTML = d.report_html
+    ? `<iframe sandbox="" srcdoc="${esc(d.report_html)}" title="分析报告预览"></iframe>`
+    : '<div class="empty">对分析结果追问“生成管理层报告”即可下载完整 HTML 报告。</div>';
+}
+function downloadBlob(name, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(a.href);
+}
+$('copilot-download-svg').addEventListener('click', () => { if (copilotState.svg) downloadBlob(`${copilotState.title}.svg`, copilotState.svg, 'image/svg+xml;charset=utf-8'); });
+$('copilot-download-report').addEventListener('click', () => { if (copilotState.report) downloadBlob('财务分析报告.html', copilotState.report, 'text/html;charset=utf-8'); });
+async function streamAssistant(question, pending) {
+  const response = await fetch('/enterprise/assistant/stream', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:state.sessionId, question})});
+  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || `请求失败（${response.status}）`); }
+  const reader = response.body.getReader(), decoder = new TextDecoder();
+  let buffer = '', result = null, answerStarted = false;
+  const handleEvent = async event => {
+    if (event.type === 'error') throw new Error(event.message || '助手执行失败');
+    if (event.type === 'delta') {
+      if (!answerStarted) { pending.textContent = ''; answerStarted = true; }
+      pending.textContent += event.text || ''; $('chat-log').scrollTop = $('chat-log').scrollHeight;
+      await new Promise(resolve => setTimeout(resolve, 14));
+    } else if (event.type === 'done') { result = event.result; }
+    else if (event.message) { pending.textContent = event.message + '…'; }
+  };
+  while (true) {
+    const {done, value} = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), {stream:!done});
+    const parts = buffer.split('\n\n'); buffer = parts.pop();
+    for (const part of parts) {
+      const data = part.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).join('');
+      if (data) await handleEvent(JSON.parse(data));
+    }
+    if (done) break;
+  }
+  if (buffer.trim().startsWith('data:')) await handleEvent(JSON.parse(buffer.trim().slice(5).trim()));
+  if (!result) throw new Error('流式响应未完成');
+  return result;
 }
 async function ask(question) {
-  if (!question.trim()) return;
-  addMessage('user', question); $('chat-input').value = ''; addMessage('assistant', '正在执行受控查询…');
-  const pending = $('chat-log').lastChild;
-  try { const result = await api('/enterprise/assistant', {method:'POST', body:JSON.stringify({session_id:state.sessionId, question})}); pending.textContent = result.answer; renderChatEvidence(result); }
+  question = question.trim(); if (!question) return;
+  const button = $('chat-form').querySelector('button[type="submit"]'); setBusy(button, true, '正在查询…');
+  addMessage('user', question); $('chat-input').value = '';
+  const pending = addMessage('assistant', '请求已受理，正在分析…');
+  try {
+    const result = await streamAssistant(question, pending);
+    pending.textContent = result.answer; pending._chatResult = result; pending.classList.add('has-evidence'); pending.tabIndex = 0; pending.title = '点击查看这条回答的依据与执行轨迹';
+    renderCopilot(result);
+    saveChatEntry(question, result); selectChatMessage(pending);
+  }
   catch (error) { pending.textContent = error.message; pending.classList.add('error'); toast(error.message, true); }
+  finally { setBusy(button, false); }
 }
+$('chat-log').addEventListener('click', event => { const node = event.target.closest('.message.assistant'); if (node) selectChatMessage(node); });
+$('chat-log').addEventListener('keydown', event => { const node = event.target.closest('.message.assistant'); if (node && ['Enter',' '].includes(event.key)) { event.preventDefault(); selectChatMessage(node); } });
 $('chat-form').addEventListener('submit', event => { event.preventDefault(); ask($('chat-input').value); });
 document.querySelectorAll('[data-question]').forEach(button => button.addEventListener('click', () => ask(button.dataset.question)));
 </script>
@@ -452,9 +634,9 @@ function renderGraph(graph) {
   const height = Math.max(340, ...columns.map(rows => rows.length * 66 + 30));
   const positions = {};
   columns.forEach((rows, column) => rows.forEach((node, index) => { positions[node.id] = {x:20 + column * 186, y:20 + index * 66}; }));
-  const lines = graph.edges.filter(x => positions[x.source] && positions[x.target]).map(edge => { const a=positions[edge.source], b=positions[edge.target]; return `<line class="graph-edge" x1="${a.x+150}" y1="${a.y+22}" x2="${b.x}" y2="${b.y+22}"><title>${esc(edge.type)}</title></line>`; }).join('');
-  const nodes = graph.nodes.filter(x => positions[x.id]).map(node => { const p=positions[node.id]; return `<g class="graph-node" data-node-id="${esc(node.id)}" tabindex="0" role="button" aria-label="查询 ${esc(node.id)}"><rect x="${p.x}" y="${p.y}" width="150" height="44"></rect><text x="${p.x+8}" y="${p.y+18}">${esc(node.id.length > 21 ? node.id.slice(0,20)+'…' : node.id)}</text><text x="${p.x+8}" y="${p.y+34}" style="fill:var(--muted);font-size:10px">${esc(node.type)}</text><title>${esc(node.label)}</title></g>`; }).join('');
-  $('graph-content').innerHTML = `<svg class="graph-canvas" viewBox="0 0 960 ${height}" style="min-height:${Math.min(height,520)}px" aria-label="业务关系图">${lines}${nodes}</svg><div class="graph-node-list">${graph.nodes.map(x => `<button class="btn secondary small" data-node-id="${esc(x.id)}">${esc(x.type)} · ${esc(x.id)}</button>`).join('')}</div>`;
+  const lines = graph.edges.filter(x => positions[x.source] && positions[x.target]).map(edge => { const a=positions[edge.source], b=positions[edge.target]; const x=(a.x+150+b.x)/2, y=(a.y+b.y)/2+17; return `<line class="graph-edge" x1="${a.x+150}" y1="${a.y+22}" x2="${b.x}" y2="${b.y+22}"><title>${esc(edge.type)}</title></line><text x="${x}" y="${y}" text-anchor="middle" style="fill:var(--muted);font-size:9px">${esc(edge.type)}</text>`; }).join('');
+  const nodes = graph.nodes.filter(x => positions[x.id]).map(node => { const p=positions[node.id]; return `<g class="graph-node" data-node-id="${esc(node.id)}" tabindex="0" role="button" aria-label="查询 ${esc(node.id)}"><rect x="${p.x}" y="${p.y}" width="150" height="44"></rect><text x="${p.x+8}" y="${p.y+18}">${esc(node.id.length > 21 ? node.id.slice(0,20)+'…' : node.id)}</text><text x="${p.x+8}" y="${p.y+34}" style="fill:var(--muted);font-size:10px">${esc(graphTypeNames[node.type] || node.type)}</text><title>${esc(node.label)}｜${esc(node.id)}</title></g>`; }).join('');
+  $('graph-content').innerHTML = `<div class="notice" style="margin-bottom:10px">点击节点可继续追溯；统一事项会打开对应详情。</div><svg class="graph-canvas" viewBox="0 0 960 ${height}" style="min-height:${Math.min(height,520)}px" aria-label="业务关系图">${lines}${nodes}</svg><div class="graph-node-list">${graph.nodes.map(x => `<button class="btn secondary small" data-node-id="${esc(x.id)}">${esc(graphTypeNames[x.type] || x.type)} · ${esc(x.id)}</button>`).join('')}</div>`;
 }
 async function queryGraph(recordId) {
   const button = $('graph-form').querySelector('button'); setBusy(button, true);
@@ -472,29 +654,59 @@ $('graph-content').addEventListener('click', event => { const node=event.target.
 $('graph-content').addEventListener('keydown', event => { const node=event.target.closest('[data-node-id]'); if (node && ['Enter',' '].includes(event.key)) { event.preventDefault(); graphNodeAction(node.dataset.nodeId); } });
 function optionsUsers(users, activeOnly = true) { return users.filter(x => !activeOnly || x.status === 'active').map(x => `<option value="${esc(x.user_id)}">${esc(x.display_name)}｜${esc(x.user_id)}｜${esc(x.role_names.join('/'))}</option>`).join(''); }
 function adminPanel(title, body) { return `<div class="panel"><div class="panel-head"><h3>${esc(title)}</h3></div><div class="panel-body">${body}</div></div>`; }
+const entityTypeNames = {user:'用户',vendor:'供应商',budget:'预算',document:'制度'};
+const changeTypeNames = {deactivate:'离职停用',update:'信息变更',adjust:'预算调整',publish:'制度发布'};
+const snapshotFieldNames = {annual_budget:'年度预算',committed:'已承诺',actual:'已发生',frozen:'已冻结',status:'状态',risk_level:'风险等级',department_id:'部门',roles:'角色',effective_from:'生效日期',effective_to:'失效日期',reason:'原因',project_id:'预算项目',department:'部门名称',cost_center:'成本中心',fiscal_year:'财年'};
+function renderSnapshot(before, after) {
+  const keys = [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])];
+  return `<div class="snapshot-grid">${keys.filter(key => JSON.stringify(before?.[key]) !== JSON.stringify(after?.[key])).map(key => `<div class="snapshot-row"><strong>${esc(snapshotFieldNames[key] || key)}</strong><small>${esc(JSON.stringify(before?.[key] ?? '—'))} → ${esc(JSON.stringify(after?.[key] ?? '—'))}</small></div>`).join('') || '<div class="empty">无字段变化</div>'}</div>`;
+}
 function renderAdmin() {
   const d=state.admin, roles=state.identity.roles, isAdmin=roles.includes('admin'), isFinance=roles.includes('finance_manager');
   const panels=[];
   if (isAdmin) {
-    panels.push(adminPanel('离职停用与待办接管', `<form class="form-grid" id="deactivate-form"><div class="field"><label for="deactivate-user">停用用户</label><select id="deactivate-user">${optionsUsers(d.users)}</select></div><div class="field"><label for="replacement-user">待办接管人（须具备相同角色）</label><select id="replacement-user">${optionsUsers(d.users)}</select></div><div class="notice">停用后原会话立即失效，历史审批不删除，当前待办转交给接管人。</div><button class="btn danger" type="submit">停用并转交代办</button></form>`));
+    panels.push(adminPanel('离职停用与待办接管', `<form class="form-grid" id="deactivate-form"><div class="field"><label for="deactivate-user">停用用户</label><select id="deactivate-user">${optionsUsers(d.users)}</select></div><div class="field"><label for="replacement-user">待办接管人（须具备相同角色）</label><select id="replacement-user">${optionsUsers(d.users)}</select></div><div class="notice">停用后原会话立即失效，历史审批不删除，当前待办转交给接管人。接管人不能与停用用户相同。</div><button class="btn danger" type="submit">停用并转交待办</button></form>`));
     panels.push(adminPanel('角色与部门调整', `<form class="form-grid" id="user-change-form"><div class="field"><label for="change-user">目标用户</label><select id="change-user">${optionsUsers(d.users)}</select></div><div class="form-grid two"><div class="field"><label for="add-role">追加角色</label><select id="add-role"><option value="">不变更角色</option><option value="department_manager">部门负责人</option><option value="finance_reviewer">财务共享审核员</option><option value="finance_bp">财务BP</option><option value="auditor">审计员</option></select></div><div class="field"><label for="change-department">调整部门</label><select id="change-department"><option value="">不变更部门</option><option value="D-SCM">供应链部</option><option value="D-RD">研发部</option><option value="D-FIN">财务部</option><option value="D-IT">信息部</option><option value="D-AUDIT">审计部</option></select></div></div><button class="btn" type="submit">应用组织变更</button></form>`));
   }
   if (isAdmin || isFinance) {
-    panels.push(adminPanel('供应商主数据', `<form class="form-grid" id="vendor-form"><div class="field"><label for="vendor-id">供应商</label><select id="vendor-id">${d.vendors.map(x=>`<option value="${esc(x.vendor_id)}">${esc(x.vendor_id)}｜${esc(x.vendor_name)}｜${esc(x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="vendor-status">状态</label><select id="vendor-status"><option value="active">active</option><option value="frozen">frozen</option><option value="inactive">inactive</option></select></div><div class="field"><label for="vendor-risk">风险</label><select id="vendor-risk"><option value="normal">normal</option><option value="high">high</option></select></div></div><button class="btn" type="submit">保存供应商变更</button></form>`));
-    panels.push(adminPanel('制度版本与生效日期', `<form class="form-grid" id="document-form"><div class="field"><label for="document-id">制度文档</label><select id="document-id">${d.documents.map(x=>`<option value="${esc(x.document_id)}" ${x.document_id==='POL-TRAVEL-2027-V3-0'?'selected':''}>${esc(x.title)}｜${esc(x.document_id)}｜${esc(x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="document-date">生效日期</label><input id="document-date" type="date" value="2027-01-01" required></div><div class="field"><label for="document-status">发布状态</label><select id="document-status"><option value="active">active</option><option value="pending">pending</option><option value="archived">archived</option></select></div></div><div class="notice">未来生效版本不会进入当前检索；历史事项仍保留提交时的制度快照。</div><button class="btn" type="submit">发布版本</button></form>`));
+    panels.push(adminPanel('供应商主数据', `<form class="form-grid" id="vendor-form"><div class="field"><label for="vendor-id">供应商</label><select id="vendor-id">${d.vendors.map(x=>`<option value="${esc(x.vendor_id)}">${esc(x.vendor_id)}｜${esc(x.vendor_name)}｜${esc(statusNames[x.status] || x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="vendor-status">状态</label><select id="vendor-status"><option value="active">生效</option><option value="frozen">冻结</option><option value="inactive">停用</option><option value="suspended">暂停</option></select></div><div class="field"><label for="vendor-risk">风险</label><select id="vendor-risk"><option value="low">低风险</option><option value="normal">正常</option><option value="medium">中风险</option><option value="high">高风险</option></select></div></div><button class="btn" type="submit">保存供应商变更</button></form>`));
+    panels.push(adminPanel('制度版本与生效日期', `<form class="form-grid" id="document-form"><div class="field"><label for="document-id">制度文档</label><select id="document-id">${d.documents.map(x=>`<option value="${esc(x.document_id)}" ${x.document_id==='POL-TRAVEL-2027-V3-0'?'selected':''}>${esc(x.title)}｜${esc(x.document_id)}｜${esc(statusNames[x.status] || x.status)}</option>`).join('')}</select></div><div class="form-grid two"><div class="field"><label for="document-date">生效日期</label><input id="document-date" type="date" value="2027-01-01" required></div><div class="field"><label for="document-status">发布状态</label><select id="document-status"><option value="active">生效</option><option value="pending">待发布</option><option value="archived">已归档</option></select></div></div><div class="notice">未来生效版本不会进入当前检索；历史事项仍保留提交时的制度快照。</div><button class="btn" type="submit">发布版本</button></form>`));
   }
   if (isFinance) panels.push(adminPanel('年度预算调整', `<form class="form-grid" id="budget-form"><div class="field"><label for="budget-project">预算项目</label><select id="budget-project">${d.budgets.map(x=>`<option value="${esc(x.project_id)}">${esc(x.project_id)}｜年度 ${esc(x.annual_budget)}｜冻结 ${esc(x.frozen)}</option>`).join('')}</select></div><div class="field"><label for="budget-amount">调整后年度预算</label><input id="budget-amount" type="number" min="1" step="0.01" required></div><div class="field"><label for="budget-reason">调整原因</label><input id="budget-reason" required placeholder="例如：新增专项任务"></div><button class="btn" type="submit">提交预算调整</button></form>`));
-  panels.push(adminPanel('变更记录', `<div class="data-list">${d.changes.length ? d.changes.map(x=>`<div class="data-row"><strong>${esc(x.entity_type)} · ${esc(x.entity_id)} · ${esc(x.change_type)}</strong><small>${esc(x.actor_id)}｜生效 ${esc(x.effective_at)}</small><details><summary>查看前后快照</summary><pre>${esc(JSON.stringify({before:JSON.parse(x.before_json),after:JSON.parse(x.after_json)},null,2))}</pre></details></div>`).join('') : '<div class="empty">尚无变更记录</div>'}</div>`));
+  panels.push(adminPanel('变更记录', `<div class="data-list">${d.changes.length ? d.changes.map(x=>`<div class="data-row"><strong>${esc(entityTypeNames[x.entity_type] || x.entity_type)} · ${esc(x.entity_id)} · ${esc(changeTypeNames[x.change_type] || x.change_type)}</strong><small>${esc(personLabel(x.actor_id))}｜生效 ${esc(formatTime(x.effective_at))}</small><details><summary>查看字段级前后对比</summary>${renderSnapshot(JSON.parse(x.before_json),JSON.parse(x.after_json))}</details></div>`).join('') : '<div class="empty">尚无变更记录</div>'}</div>`));
   $('admin-content').innerHTML=`<div class="admin-grid">${panels.join('')}</div>`;
+  const deactivateUser = $('deactivate-user'), replacementUser = $('replacement-user');
+  if (deactivateUser && replacementUser) {
+    const syncReplacement = () => { if (deactivateUser.value === replacementUser.value) replacementUser.value = [...replacementUser.options].find(x => x.value !== deactivateUser.value)?.value || ''; };
+    deactivateUser.addEventListener('change', syncReplacement); syncReplacement();
+  }
+  const vendorSelect = $('vendor-id');
+  if (vendorSelect) {
+    const syncVendor = () => { const vendor = d.vendors.find(x => x.vendor_id === vendorSelect.value); if (vendor) { $('vendor-status').value = vendor.status; $('vendor-risk').value = vendor.risk_level; } };
+    vendorSelect.addEventListener('change', syncVendor); syncVendor();
+  }
+  const documentSelect = $('document-id');
+  if (documentSelect) {
+    const syncDocument = () => { const document = d.documents.find(x => x.document_id === documentSelect.value); if (document) { $('document-status').value = document.status; $('document-date').value = document.effective_from; } };
+    documentSelect.addEventListener('change', syncDocument); syncDocument();
+  }
   bindAdminForms();
 }
-async function loadAdmin() { try { state.admin=await api(`/enterprise/admin-data?session_id=${encodeURIComponent(state.sessionId)}`); renderAdmin(); } catch(error) { $('admin-content').innerHTML=`<div class="empty">${esc(error.message)}</div>`; } }
+async function loadAuditEvents() {
+  try {
+    const events = await api(`/enterprise/audit-events?session_id=${encodeURIComponent(state.sessionId)}&limit=50`);
+    $('audit-content').innerHTML = events.length ? `<div class="data-list">${events.map(event => `<div class="data-row"><strong>${esc(event.tool_name)}｜${esc(event.user_name)}｜${esc(statusNames[event.status] || event.status)}</strong><small>${esc(formatTime(event.created_at))}｜${esc(event.audit_id)}｜${esc(event.model_name || '离线规则')}｜${event.latency_ms} ms</small><div>问题：${esc(event.question)}</div><details><summary>查看工具参数与结果</summary><pre>${esc(event.arguments_json)}</pre><pre>${esc(event.result_summary)}</pre></details></div>`).join('')}</div>` : '<div class="empty">暂无智能体工具调用记录。提问后刷新这里即可查看。</div>';
+  } catch (error) { $('audit-content').innerHTML = `<div class="empty">${esc(error.message)}</div>`; }
+}
+$('audit-refresh').addEventListener('click', loadAuditEvents);
+async function loadAdmin() { try { state.admin=await api(`/enterprise/admin-data?session_id=${encodeURIComponent(state.sessionId)}`); renderAdmin(); await loadAuditEvents(); } catch(error) { $('admin-content').innerHTML=`<div class="empty">${esc(error.message)}</div>`; } }
 function renderUserOptions() {
   const selected = state.identity?.user_id || $('user-select').value;
   $('user-select').innerHTML=state.users.map(x=>`<option value="${esc(x.user_id)}" ${x.status!=='active'?'disabled':''}>${esc(x.display_name)}｜${esc(x.user_id)}${x.status!=='active'?'（已停用）':''}</option>`).join('');
   if (state.users.some(x=>x.user_id===selected)) $('user-select').value=selected;
 }
-async function submitAdmin(path, payload, button) {
+async function submitAdmin(path, payload, button, confirmation = '') {
+  if (confirmation && !window.confirm(confirmation)) return;
   setBusy(button,true);
   try {
     await api(path,{method:'POST',body:JSON.stringify({session_id:state.sessionId,payload})});
@@ -504,17 +716,25 @@ async function submitAdmin(path, payload, button) {
   catch(error){toast(error.message,true);} finally{setBusy(button,false);}
 }
 function bindAdminForms() {
-  const de=$('deactivate-form'); if(de) de.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/users/${encodeURIComponent($('deactivate-user').value)}/deactivate`,{replacement_id:$('replacement-user').value},event.target.querySelector('button'));});
-  const uc=$('user-change-form'); if(uc) uc.addEventListener('submit',event=>{event.preventDefault();const userId=$('change-user').value,user=state.admin.users.find(x=>x.user_id===userId),role=$('add-role').value,department=$('change-department').value,payload={};if(role)payload.roles=[...new Set([...user.roles,role])];if(department)payload.department_id=department;if(!Object.keys(payload).length){toast('请至少选择一项变更',true);return;}submitAdmin(`/enterprise/changes/users/${encodeURIComponent(userId)}`,payload,event.target.querySelector('button'));});
-  const vf=$('vendor-form'); if(vf) vf.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/vendors/${encodeURIComponent($('vendor-id').value)}`,{status:$('vendor-status').value,risk_level:$('vendor-risk').value},event.target.querySelector('button'));});
-  const bf=$('budget-form'); if(bf) bf.addEventListener('submit',event=>{event.preventDefault();submitAdmin(`/enterprise/changes/budgets/${encodeURIComponent($('budget-project').value)}`,{annual_budget:$('budget-amount').value,reason:$('budget-reason').value},event.target.querySelector('button'));});
-  const df=$('document-form'); if(df) df.addEventListener('submit',async event=>{event.preventDefault();const button=event.target.querySelector('button');setBusy(button,true);try{await api(`/enterprise/changes/documents/${encodeURIComponent($('document-id').value)}`,{method:'POST',body:JSON.stringify({session_id:state.sessionId,effective_from:$('document-date').value,status:$('document-status').value})});await loadAdmin();toast('制度版本已发布，检索按生效日期更新');}catch(error){toast(error.message,true);}finally{setBusy(button,false);}});
+  const de=$('deactivate-form'); if(de) de.addEventListener('submit',event=>{event.preventDefault();const userId=$('deactivate-user').value,replacementId=$('replacement-user').value;if(userId===replacementId){toast('接管人不能与停用用户相同',true);return;}submitAdmin(`/enterprise/changes/users/${encodeURIComponent(userId)}/deactivate`,{replacement_id:replacementId},event.target.querySelector('button'),`确认停用${personName(userId)}，并将当前待办转交给${personName(replacementId)}？`);});
+  const uc=$('user-change-form'); if(uc) uc.addEventListener('submit',event=>{event.preventDefault();const userId=$('change-user').value,user=state.admin.users.find(x=>x.user_id===userId),role=$('add-role').value,department=$('change-department').value,payload={};if(role)payload.roles=[...new Set([...user.roles,role])];if(department)payload.department_id=department;if(!Object.keys(payload).length){toast('请至少选择一项变更',true);return;}submitAdmin(`/enterprise/changes/users/${encodeURIComponent(userId)}`,payload,event.target.querySelector('button'),`确认变更${personName(userId)}的组织或角色信息？`);});
+  const vf=$('vendor-form'); if(vf) vf.addEventListener('submit',event=>{event.preventDefault();const vendorId=$('vendor-id').value,vendor=state.admin.vendors.find(x=>x.vendor_id===vendorId),status=$('vendor-status').value,risk=$('vendor-risk').value;submitAdmin(`/enterprise/changes/vendors/${encodeURIComponent(vendorId)}`,{status,risk_level:risk},event.target.querySelector('button'),`确认将${vendor.vendor_name}的状态由 ${vendor.status} 改为 ${status}、风险由 ${vendor.risk_level} 改为 ${risk}？`);});
+  const bf=$('budget-form'); if(bf) bf.addEventListener('submit',event=>{event.preventDefault();const projectId=$('budget-project').value;submitAdmin(`/enterprise/changes/budgets/${encodeURIComponent(projectId)}`,{annual_budget:$('budget-amount').value,reason:$('budget-reason').value},event.target.querySelector('button'),`确认将 ${projectId} 年度预算调整为 ¥${money($('budget-amount').value)}？`);});
+  const df=$('document-form'); if(df) df.addEventListener('submit',async event=>{event.preventDefault();if(!window.confirm(`确认发布 ${$('document-id').value}，生效日期为 ${$('document-date').value}？`))return;const button=event.target.querySelector('button');setBusy(button,true);try{await api(`/enterprise/changes/documents/${encodeURIComponent($('document-id').value)}`,{method:'POST',body:JSON.stringify({session_id:state.sessionId,effective_from:$('document-date').value,status:$('document-status').value})});await loadAdmin();toast('制度版本已发布，检索按生效日期更新');}catch(error){toast(error.message,true);}finally{setBusy(button,false);}});
+}
+async function restoreContext() {
+  const allowed = ['overview','business','reconciliation','graph','assistant','admin'];
+  let view = localStorage.getItem('finance_view') || 'overview';
+  if (!allowed.includes(view) || (view === 'admin' && $('admin-nav').classList.contains('hidden'))) view = 'overview';
+  showView(view);
+  const itemId = localStorage.getItem('finance_selected_item');
+  if (itemId && state.workspace.visible_items.some(x => x.item_id === itemId)) await openItem(itemId);
 }
 async function init() {
   try {
     state.users=await api('/enterprise/users');
     renderUserOptions();
-    if(state.sessionId){try{await loadWorkspace();$('user-select').value=state.identity.user_id;return;}catch(error){localStorage.removeItem('finance_session');state.sessionId='';}}
+    if(state.sessionId){try{await loadWorkspace();$('user-select').value=state.identity.user_id;await restoreContext();return;}catch(error){localStorage.removeItem('finance_session');state.sessionId='';}}
     const first=state.users.find(x=>x.user_id==='U-EMP-001')||state.users.find(x=>x.status==='active');
     if(first){$('user-select').value=first.user_id;await switchUser(first.user_id);}
   }catch(error){toast(error.message,true);$('identity-name').textContent='平台未连接';}

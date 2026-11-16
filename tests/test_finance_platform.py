@@ -182,6 +182,9 @@ class FinancePlatformTest(unittest.TestCase):
             ) as knowledge:
                 result = knowledge.build()
                 self.assertEqual(result["vector_count"], 101)
+                manifest = json.loads((Path(tmp) / "chroma" / "vector_manifest.json").read_text(encoding="utf-8"))
+                self.assertEqual(manifest["vector_count"], 101)
+                self.assertIn("embedding_model", manifest)
                 self.assertEqual(knowledge.count(), 101)
                 public_hits = knowledge.search("付款制度", {"public"}, top_k=10)
                 self.assertTrue(public_hits)

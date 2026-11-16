@@ -12,7 +12,7 @@ from typing import Any
 from .database import build_database, connect, database_path
 from .enterprise_database import (
     EnterpriseRepository, add_event, add_task, assignment_for, close_tasks,
-    create_work_item, utc_now,
+    create_work_item, utc_now, workflow_steps,
 )
 from .ingestion import ROOT
 from .scenarios import FinanceData, PaymentService, ReconciliationService, decimal_text, money
@@ -108,8 +108,7 @@ class WorkflowService:
                      (decimal_text(actual), decimal_text(frozen), item["project_id"]))
         conn.execute("UPDATE budget_reservations SET status='consumed',updated_at=? WHERE item_id=?", (at, item["item_id"]))
 
-    def create_expense(self, session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        actor = self.repository.identity(session_id)
+    def _expense_calculation(self, actor: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
         if not set(actor["roles"]) & {"employee", "department_manager"}:
             raise PermissionError("仅员工或部门负责人可提交报销")
         city = str(payload.get("city", "")).strip()
@@ -117,6 +116,26 @@ class WorkflowService:
         price = money(payload.get("lodging_price", 0))
         question = f"{city}出差{days}天，住宿{price}元，{actor['level']}"
         calculation = TravelService(FinanceData(self.root, self.db_path)).precheck_from_text(question, "employee")
+        return calculation, days
+
+    def precheck_expense(self, session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        actor = self.repository.identity(session_id)
+        calculation, days = self._expense_calculation(actor, payload)
+        with connect(self.db_path) as conn:
+            assignee, role = assignment_for(conn, "pending_department", actor["user_id"])
+            row = conn.execute("SELECT display_name FROM users WHERE user_id=?", (assignee,)).fetchone()
+            steps = workflow_steps(conn, {
+                "scenario": "expense", "status": "pending_department", "created_by": actor["user_id"],
+                "requires_finance_manager": money(calculation["overlimit_amount"]) > 0 or days >= 5,
+                "return_to_status": None,
+            })
+        return {**calculation, "write_operation": False, "workflow_steps": steps,
+                "next_step": {"status": "pending_department", "assignee_id": assignee,
+                              "assignee_name": row[0] if row else assignee, "role": role}}
+
+    def create_expense(self, session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        actor = self.repository.identity(session_id)
+        calculation, days = self._expense_calculation(actor, payload)
         report_id = "BX-2026-" + uuid.uuid4().hex[:8].upper()
         item_id = "WI-" + report_id
         at = utc_now()
@@ -126,14 +145,14 @@ class WorkflowService:
                 """INSERT INTO expense_reports(report_id,city,days,level,lodging_price,lodging_total,
                    meal_total,transport_total,total_amount,overlimit_amount,approval_chain,created_by_role,created_at,system)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (report_id, city, days, actor["level"], calculation["lodging_price"], calculation["lodging_total"],
+                (report_id, calculation["city"], days, actor["level"], calculation["lodging_price"], calculation["lodging_total"],
                  calculation["meal_total"], calculation["transport_total"], calculation["total_amount"],
                  calculation["overlimit_amount"], "|".join(calculation["approvers"]), actor["knowledge_role"], at,
                  "enterprise_synthetic_demo"),
             )
             create_work_item(
                 conn, scenario="expense", record_id=report_id,
-                title=f"{city}差旅报销 {calculation['total_amount']} 元", status="pending_department",
+                title=f"{calculation['city']}差旅报销 {calculation['total_amount']} 元", status="pending_department",
                 department_id=actor["department_id"], project_id=actor["project_id"], amount=calculation["total_amount"],
                 created_by=actor["user_id"], policy_version=calculation["rule_version"],
                 requires_finance_manager=money(calculation["overlimit_amount"]) > 0 or days >= 5,
@@ -180,6 +199,19 @@ class WorkflowService:
             self._audit(conn, actor, "submit_payment", item)
         return self.repository.get_work_item(item_id, actor)
 
+    def list_reconciliation_runs(self, session_id: str) -> list[dict[str, Any]]:
+        actor = self.repository.identity(session_id)
+        if not set(actor["roles"]) & {"accountant", "finance_manager", "auditor"}:
+            raise PermissionError("当前角色无权查看对账批次")
+        with connect(self.db_path) as conn:
+            return [dict(row) for row in conn.execute(
+                """SELECT r.*,u.display_name AS creator_name,
+                   (SELECT COUNT(*) FROM work_items w WHERE w.scenario='reconciliation' AND w.record_id LIKE r.run_id || ':%') AS item_count,
+                   (SELECT COUNT(*) FROM work_items w WHERE w.scenario='reconciliation' AND w.record_id LIKE r.run_id || ':%' AND w.status='closed') AS closed_count
+                   FROM reconciliation_runs r JOIN users u ON u.user_id=r.created_by
+                   ORDER BY r.created_at DESC LIMIT 20"""
+            )]
+
     def run_reconciliation(self, session_id: str, account_id: str | None = None) -> dict[str, Any]:
         actor = self.repository.identity(session_id)
         if not set(actor["roles"]) & {"accountant", "finance_manager"}:
@@ -188,6 +220,7 @@ class WorkflowService:
         run_id = "REC-" + uuid.uuid4().hex[:12].upper()
         at = utc_now()
         item_ids = []
+        items = []
         labels = {
             "duplicate_bank_record": "银行流水重复", "duplicate_ledger_record": "总账记录重复",
             "missing_in_ledger": "银行有流水、总账无记录", "missing_in_bank": "总账有记录、银行无流水",
@@ -217,11 +250,13 @@ class WorkflowService:
                      labels.get(finding["code"], finding["code"]), "open", at),
                 )
                 item_ids.append(item_id)
+                items.append({"item_id": item_id, "record_id": finding["record_id"],
+                              "code": finding["code"], "message": labels.get(finding["code"], finding["code"])})
             conn.execute(
                 "INSERT INTO audit_events(timestamp,channel,tool,user_role,status,record_id,payload_stored) VALUES (?,?,?,?,?,?,0)",
                 (at, "enterprise_workspace", "run_reconciliation", "|".join(actor["roles"]), "success", run_id),
             )
-        return {"run_id": run_id, "item_ids": item_ids, "analysis": result}
+        return {"run_id": run_id, "item_ids": item_ids, "items": items, "analysis": result}
 
     def allowed_actions(self, identity: dict[str, Any], item: dict[str, Any]) -> list[str]:
         status = item["status"]
@@ -400,8 +435,11 @@ class WorkflowService:
                 add_task(conn, item_id, assignee, role, item["title"], at)
             add_event(conn, item_id, actor["user_id"], action, old_status, new_status, comment, at)
             self._audit(conn, actor, action, item)
+            assignee_row = conn.execute("SELECT display_name FROM users WHERE user_id=?", (assignee,)).fetchone() if assignee else None
             response = {"item_id": item_id, "record_id": item["record_id"], "action": action,
                         "from_status": old_status, "status": new_status, "version": expected_version + 1,
+                        "current_assignee": assignee, "current_role": role,
+                        "assignee_name": assignee_row[0] if assignee_row else None,
                         "idempotent_replay": False, "budget_changed": budget_changed or action in {"cancel", "return", "pay"}}
             conn.execute(
                 "INSERT INTO action_requests VALUES (?,?,?,?,?,?,?)",

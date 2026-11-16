@@ -12,6 +12,7 @@ from typing import Any
 
 from roles_config import get_user_permissions
 from .ingestion import ROOT, build_corpus
+from .number_guard import validate_answer_numbers
 
 SENSITIVE_TERMS = ("个人明细", "报销单据", "工资", "薪资", "他人报销")
 
@@ -42,6 +43,8 @@ class PolicySearch:
         if self.mode not in {"lexical", "vector"}:
             raise ValueError("FINANCE_RETRIEVAL_MODE 仅支持 lexical 或 vector")
         self._vector = None
+        self.last_search_mode = self.mode
+        self.fallback_reason = None
 
     @property
     def vector(self):
@@ -122,11 +125,17 @@ class PolicySearch:
         if len(question) > 1000:
             raise ValueError("question 不能超过 1000 字")
         states = self._document_states()
+        self.last_search_mode = self.mode
+        self.fallback_reason = None
         if self.mode == "vector":
-            hits = self.vector.search(question, set(get_user_permissions(user_role)), max(top_k * 3, top_k))
-            return [hit for hit in hits if self._active_document(
-                hit["document_id"], "active", as_of, states
-            )][:top_k]
+            try:
+                hits = self.vector.search(question, set(get_user_permissions(user_role)), max(top_k * 3, top_k))
+                return [hit for hit in hits if self._active_document(
+                    hit["document_id"], "active", as_of, states
+                )][:top_k]
+            except Exception as exc:
+                self.last_search_mode = "lexical_fallback"
+                self.fallback_reason = str(exc)[:300]
         return self._lexical_search(question, user_role, top_k, as_of)
 
     @staticmethod
@@ -143,22 +152,33 @@ class PolicySearch:
             return {
                 "answer": "权限不足：该问题涉及个人或敏感明细，已按最小权限原则拦截。",
                 "blocked": True, "citations": [], "contexts": [],
-                "retrieval_mode": self.mode, "generation_mode": "none",
+                "retrieval_mode": self.last_search_mode, "generation_mode": "none",
             }
         hits = self.search(question, user_role)
         if not hits:
             return {
                 "answer": "知识库中未找到可回答该问题的有效条款。", "blocked": False,
-                "citations": [], "contexts": [], "retrieval_mode": self.mode,
+                "citations": [], "contexts": [], "retrieval_mode": self.last_search_mode,
                 "generation_mode": "none",
             }
         citations = self._citations(hits)
         contexts = [hit["text"] for hit in hits]
-        if self.mode == "vector" and os.getenv("FINANCE_GENERATION_ENABLED", "true").lower() == "true":
+        numeric_guard = None
+        if self.last_search_mode == "vector" and os.getenv("FINANCE_GENERATION_ENABLED", "true").lower() == "true":
+            from .llm_routing import model_for_question
             from .vector_rag import generate_answer
 
             answer = generate_answer(question, hits)
-            generation_mode = os.getenv("FINANCE_LLM_MODEL", "qwen-plus")
+            generation_mode = model_for_question(question)
+            numeric_guard = validate_answer_numbers(answer, contexts + citations)
+            if not numeric_guard.valid:
+                return {
+                    "answer": "数字校验守卫已拦截这次制度回答：模型给出了检索条款中不存在的数字 "
+                              + "、".join(numeric_guard.missing) + "。请重新提问。",
+                    "blocked": True, "guard_blocked": True, "citations": citations, "contexts": contexts,
+                    "retrieval_mode": self.last_search_mode, "generation_mode": generation_mode,
+                    "numeric_guard": {"valid": False, "missing": list(numeric_guard.missing)},
+                }
         else:
             excerpts = []
             for index, hit in enumerate(hits[:3], 1):
@@ -168,5 +188,7 @@ class PolicySearch:
             generation_mode = "extractive"
         return {
             "answer": answer, "blocked": False, "citations": citations, "contexts": contexts,
-            "retrieval_mode": self.mode, "generation_mode": generation_mode,
+            "retrieval_mode": self.last_search_mode, "generation_mode": generation_mode,
+            "fallback_reason": self.fallback_reason,
+            "numeric_guard": {"valid": True, "checked": list(numeric_guard.checked)} if numeric_guard else None,
         }

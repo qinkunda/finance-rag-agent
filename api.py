@@ -3,20 +3,27 @@ from __future__ import annotations
 
 import json
 import os
+import queue
+import threading
+import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from finance_platform.agent import FinanceAgent, LLMError, OpenAICompatibleLLM
+from finance_platform.audit_trail import AgentAuditTrail
 from finance_platform.changes import ChangeService
+from finance_platform.copilot import FinanceCopilot
 from finance_platform.database import connect
 from finance_platform.enterprise_database import EnterpriseRepository
 from finance_platform.graph import FinanceGraphService
 from finance_platform.orchestrator import UnifiedFinancePlatform
-from finance_platform.vector_rag import vector_directory
+from finance_platform.llm_routing import model_for_question
+from finance_platform.vector_rag import vector_status
 from finance_platform.workflow import WorkflowConflictError, WorkflowService
 
 ROOT = Path(__file__).resolve().parent
@@ -107,8 +114,59 @@ def get_graph() -> FinanceGraphService:
     return FinanceGraphService(db_path=get_platform().data.db_path)
 
 
+@lru_cache
+def get_audit() -> AgentAuditTrail:
+    return AgentAuditTrail(get_platform().data.db_path)
+
+
+@lru_cache
+def get_copilot() -> FinanceCopilot:
+    return FinanceCopilot(ROOT)
+
+
+@lru_cache
+def get_agent() -> FinanceAgent | None:
+    offline = os.getenv("FINANCE_OFFLINE_DEMO", "true").lower() == "true"
+    if offline and os.getenv("FINANCE_AGENT_ENABLED", "false").lower() != "true":
+        return None
+    if not (os.getenv("FINANCE_LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY")):
+        return None
+    return FinanceAgent(ROOT, get_platform().data.db_path, llm=OpenAICompatibleLLM())
+
+
 def repository() -> EnterpriseRepository:
     return get_workflow().repository
+
+
+def execute_assistant(question: str, session_id: str,
+                      on_event: Callable[[dict], None] | None = None) -> dict[str, Any]:
+    def emit(event_type: str, **payload) -> None:
+        if on_event:
+            on_event({"type": event_type, **payload})
+
+    agent = get_agent()
+    if agent is not None:
+        try:
+            result = agent.try_handle(question, session_id, on_event=on_event)
+            if result is not None:
+                return result
+        except LLMError as exc:
+            identity = repository().identity(session_id)
+            get_audit().record(
+                request_id=f"REQ-FALLBACK-{time.time_ns()}", session_id=session_id, identity=identity,
+                question=question, tool_name="llm_gateway", arguments={}, result=str(exc), status="error",
+                execution_mode="fallback",
+            )
+            emit("fallback", message="在线模型暂不可用，已切换离线规则引擎")
+    emit("tool_started", message="正在执行离线分析", tool="copilot")
+    result = get_copilot().try_handle(question, session_id)
+    if result is not None:
+        emit("tool_completed", message="离线分析完成", tool="copilot", status=result["status"])
+        return result
+    emit("tool_started", message="正在执行统一业务工具", tool="unified_platform")
+    result = get_platform().handle_enterprise(question, session_id)
+    emit("tool_completed", message="业务工具执行完成", tool="unified_platform", status=result["status"])
+    return result
 
 
 @app.exception_handler(PermissionError)
@@ -142,10 +200,17 @@ def health() -> dict[str, Any]:
     manifest_path = ROOT / "data" / "curated" / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     offline = os.getenv("FINANCE_OFFLINE_DEMO", "true").lower() == "true"
+    vector = vector_status(ROOT)
     return {
         "status": "ok", "offline_demo": offline, "retrieval_mode": platform.policy.mode,
         "document_count": manifest["document_count"], "chunk_count": manifest["chunk_count"],
-        "vector_index_ready": (vector_directory(ROOT) / "chroma.sqlite3").exists(),
+        "vector_index_ready": vector["ready"] and vector["model_matches"],
+        "vector_index_present": vector["ready"], "vector_index_model": vector["index_model"],
+        "embedding_model": vector["current_model"], "vector_model_matches": vector["model_matches"],
+        "agent_enabled": get_agent() is not None,
+        "small_model": model_for_question("住宿上限是多少"),
+        "complex_model": model_for_question("分析各部门预算并生成报告"),
+        "audit_event_count": get_audit().count(),
         "database": platform.repository.stats(), "data_declaration": "全部为企业财务合成演示数据",
     }
 
@@ -224,6 +289,11 @@ def enterprise_item(item_id: str, session_id: str) -> dict[str, Any]:
     return item
 
 
+@app.post("/enterprise/expenses/precheck")
+def precheck_expense(request: ExpenseCreateRequest) -> dict[str, Any]:
+    return get_workflow().precheck_expense(request.session_id, request.model_dump())
+
+
 @app.post("/enterprise/expenses")
 def create_expense(request: ExpenseCreateRequest) -> dict[str, Any]:
     return get_workflow().create_expense(request.session_id, request.model_dump())
@@ -241,6 +311,11 @@ def item_action(item_id: str, request: WorkflowActionRequest) -> dict[str, Any]:
                               comment=request.comment, payload=request.payload)
 
 
+@app.get("/enterprise/reconciliation/runs")
+def reconciliation_runs(session_id: str) -> list[dict[str, Any]]:
+    return get_workflow().list_reconciliation_runs(session_id)
+
+
 @app.post("/enterprise/reconciliation/runs")
 def reconciliation_run(request: ReconciliationRunRequest) -> dict[str, Any]:
     result = get_workflow().run_reconciliation(request.session_id, request.account_id)
@@ -250,12 +325,73 @@ def reconciliation_run(request: ReconciliationRunRequest) -> dict[str, Any]:
 
 @app.post("/enterprise/assistant")
 def enterprise_assistant(request: EnterpriseQueryRequest) -> dict[str, Any]:
-    return get_platform().handle_enterprise(request.question, request.session_id)
+    return execute_assistant(request.question, request.session_id)
+
+
+def _sse(data: dict[str, Any]) -> str:
+    return "data: " + json.dumps(data, ensure_ascii=False, default=str) + "\n\n"
+
+
+@app.post("/enterprise/assistant/stream")
+def enterprise_assistant_stream(request: EnterpriseQueryRequest) -> StreamingResponse:
+    def generate():
+        events: queue.Queue = queue.Queue()
+
+        def worker():
+            try:
+                result = execute_assistant(request.question, request.session_id, on_event=events.put)
+                events.put({"type": "_result", "result": result})
+            except PermissionError as exc:
+                events.put({"type": "_error", "message": str(exc), "status": 403})
+            except KeyError as exc:
+                events.put({"type": "_error", "message": str(exc), "status": 404})
+            except ValueError as exc:
+                events.put({"type": "_error", "message": str(exc), "status": 400})
+            except Exception as exc:
+                events.put({"type": "_error", "message": f"助手执行失败：{exc}", "status": 500})
+
+        threading.Thread(target=worker, daemon=True).start()
+        yield _sse({"type": "start", "message": "请求已受理，正在分析"})
+        idle = 0
+        while True:
+            try:
+                event = events.get(timeout=1)
+                idle = 0
+            except queue.Empty:
+                idle += 1
+                if idle >= 10:
+                    yield ": keepalive\n\n"
+                    idle = 0
+                continue
+            event_type = event.get("type")
+            if event_type == "_result":
+                result = event["result"]
+                answer = result.get("answer", "")
+                for index in range(0, len(answer), 28):
+                    yield _sse({"type": "delta", "text": answer[index:index + 28]})
+                yield _sse({"type": "done", "result": result})
+                break
+            if event_type == "_error":
+                yield _sse({"type": "error", "message": event["message"], "status": event["status"]})
+                break
+            yield _sse(event)
+
+    return StreamingResponse(generate(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
+    })
 
 
 @app.get("/enterprise/graph")
 def enterprise_graph(session_id: str, record_id: str | None = None, depth: int = 4) -> dict[str, Any]:
     return get_graph().query(session_id, record_id, depth)
+
+
+@app.get("/enterprise/audit-events")
+def enterprise_audit_events(session_id: str, limit: int = 50, tool_name: str | None = None) -> list[dict[str, Any]]:
+    identity = repository().identity(session_id)
+    if not set(identity["roles"]) & {"admin", "finance_manager", "auditor"}:
+        raise PermissionError("仅审计员、财务负责人和系统管理员可查看智能体审计日志")
+    return get_audit().list_events(limit=limit, tool_name=tool_name)
 
 
 @app.get("/enterprise/admin-data")

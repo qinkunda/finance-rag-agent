@@ -37,6 +37,8 @@ class ChangeService:
 
     @staticmethod
     def _reassign(conn: sqlite3.Connection, user_id: str, replacement_id: str | None, at: str) -> int:
+        if replacement_id == user_id:
+            raise ValueError("接管人不能与停用用户相同")
         rows = [dict(x) for x in conn.execute(
             "SELECT * FROM work_items WHERE current_assignee=? AND status NOT IN ('closed','cancelled')", (user_id,)
         )]

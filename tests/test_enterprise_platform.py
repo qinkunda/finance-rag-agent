@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 os.environ["FINANCE_OFFLINE_DEMO"] = "true"
 os.environ["FINANCE_RETRIEVAL_MODE"] = "lexical"
+os.environ["FINANCE_LLM_API_KEY"] = ""  # 测试隔离：强制走离线规则引擎，不触发真实 LLM 网关
 
 from api import app
 from finance_platform.changes import ChangeService
@@ -100,12 +101,27 @@ class EnterprisePlatformTest(unittest.TestCase):
         self.assertTrue(any(x["status"] == "resolved" for x in item["exceptions"]))
 
     def test_04_expense_uses_identity_level_and_closes(self):
-        created = self.workflow.create_expense(self.session("U-EMP-001"),
-                                               {"city": "北京", "days": 3, "lodging_price": "450"})
+        payload = {"city": "北京", "days": 3, "lodging_price": "450"}
+        with connect(self.db) as conn:
+            before_count = conn.execute("SELECT COUNT(*) FROM expense_reports").fetchone()[0]
+        preview = self.workflow.precheck_expense(self.session("U-EMP-001"), payload)
+        self.assertEqual(preview["total_amount"], "1590.00")
+        self.assertEqual(preview["next_step"]["assignee_name"], "王衡")
+        self.assertEqual(preview["workflow_steps"][1]["assignee_name"], "王衡")
+        self.assertFalse(any(x["assignee_name"] == "何谨" for x in preview["workflow_steps"]))
+        high_preview = self.workflow.precheck_expense(self.session("U-EMP-001"), {**payload, "lodging_price": "550"})
+        self.assertTrue(any(x["assignee_name"] == "何谨" for x in high_preview["workflow_steps"]))
+        with connect(self.db) as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM expense_reports").fetchone()[0], before_count)
+        created = self.workflow.create_expense(self.session("U-EMP-001"), payload)
         item_id = created["item_id"]
         self.assertEqual(created["business"]["level"], "普通员工")
         self.assertEqual(created["amount"], "1590.00")
-        self.act("U-MGR-SCM", item_id, "approve", 1)
+        self.assertEqual(created["creator_name"], "林晓")
+        self.assertEqual(created["assignee_name"], "王衡")
+        self.assertIn("available", created["budget_summary"])
+        approved = self.act("U-MGR-SCM", item_id, "approve", 1)
+        self.assertEqual(approved["assignee_name"], "孙岚")
         self.act("U-FIN-REVIEW", item_id, "approve", 2)
         self.act("U-FIN-BP", item_id, "approve", 3)
         self.act("U-TREASURY", item_id, "pay", 4)
@@ -116,16 +132,23 @@ class EnterprisePlatformTest(unittest.TestCase):
         result = self.workflow.run_reconciliation(self.session("U-ACCOUNTANT"), "CNY-OPER-002")
         self.assertEqual(result["analysis"]["matched_count"], 56)
         self.assertEqual(len(result["item_ids"]), 2)
+        self.assertEqual({x["record_id"] for x in result["items"]}, {"BK-004", "BK-007"})
+        runs = self.workflow.list_reconciliation_runs(self.session("U-ACCOUNTANT"))
+        self.assertEqual(runs[0]["run_id"], result["run_id"])
+        self.assertEqual((runs[0]["item_count"], runs[0]["closed_count"]), (2, 0))
         for index, item_id in enumerate(result["item_ids"]):
             self.act("U-ACCOUNTANT", item_id, "resolve", 1, "已核对合成原始记录并完成调整")
             self.act("U-FIN-HEAD", item_id, "approve", 2, "复核通过")
             item = self.repo.get_work_item(item_id, self.repo.identity(self.session("U-AUDITOR")))
             self.assertEqual(item["status"], "closed")
             self.assertTrue(all(x["status"] == "resolved" for x in item["exceptions"]))
+        self.assertEqual(self.workflow.list_reconciliation_runs(self.session("U-ACCOUNTANT"))[0]["closed_count"], 2)
 
     def test_06_deactivation_reassigns_tasks_and_disables_session(self):
         old_session = self.session("U-FIN-REVIEW")
         changes = ChangeService(ROOT, self.db)
+        with self.assertRaisesRegex(ValueError, "接管人不能与停用用户相同"):
+            changes.deactivate_user(self.session("U-ADMIN"), "U-FIN-REVIEW", "U-FIN-REVIEW")
         result = changes.deactivate_user(self.session("U-ADMIN"), "U-FIN-REVIEW", "U-FIN-REVIEW-BACK")
         self.assertGreater(result["reassigned_count"], 0)
         with self.assertRaises(PermissionError):
@@ -179,6 +202,12 @@ class EnterprisePlatformTest(unittest.TestCase):
         workspace = client.get("/enterprise/workspace", params={"session_id": "api-enterprise-test"})
         self.assertEqual(workspace.status_code, 200)
         self.assertEqual(workspace.json()["identity"]["user_id"], "U-EMP-001")
+        preview = client.post("/enterprise/expenses/precheck", json={
+            "session_id": "api-enterprise-test", "city": "深圳", "days": 2, "lodging_price": "450"
+        })
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.json()["total_amount"], "910.00")
+        self.assertEqual(preview.json()["next_step"]["assignee_name"], "王衡")
         response = client.post("/enterprise/assistant", json={
             "session_id": "api-enterprise-test", "question": "帮我报销深圳出差3天，经理级，住宿一晚550"
         })

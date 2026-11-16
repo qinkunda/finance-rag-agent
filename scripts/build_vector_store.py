@@ -11,5 +11,6 @@ from finance_platform.vector_rag import VectorKnowledgeBase
 
 
 if __name__ == "__main__":
-    result = VectorKnowledgeBase().build(rebuild=True)
+    with VectorKnowledgeBase() as knowledge:
+        result = knowledge.build(rebuild=True)
     print(json.dumps(result, ensure_ascii=False))
