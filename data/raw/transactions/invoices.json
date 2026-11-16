@@ -1,0 +1,182 @@
+[
+  {
+    "invoice_id": "INV-001",
+    "request_id": "PR-001",
+    "invoice_number": "SYN-INV-001",
+    "status": "valid",
+    "amount": "30000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-002",
+    "request_id": "PR-002",
+    "invoice_number": "SYN-INV-002",
+    "status": "valid",
+    "amount": "60000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-003",
+    "request_id": "PR-003",
+    "invoice_number": "SYN-INV-003",
+    "status": "valid",
+    "amount": "70000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-004",
+    "request_id": "PR-004",
+    "invoice_number": "SYN-INV-004",
+    "status": "valid",
+    "amount": "48000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-005",
+    "request_id": "PR-005",
+    "invoice_number": "SYN-INV-005",
+    "status": "valid",
+    "amount": "168000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-006",
+    "request_id": "PR-006",
+    "invoice_number": "SYN-INV-006",
+    "status": "valid",
+    "amount": "24000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-007",
+    "request_id": "PR-007",
+    "invoice_number": "SYN-INV-007",
+    "status": "valid",
+    "amount": "90000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-009",
+    "request_id": "PR-009",
+    "invoice_number": "SYN-INV-009",
+    "status": "valid",
+    "amount": "45000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-011",
+    "request_id": "PR-011",
+    "invoice_number": "SYN-INV-011",
+    "status": "valid",
+    "amount": "27000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-012",
+    "request_id": "PR-012",
+    "invoice_number": "SYN-INV-012",
+    "status": "valid",
+    "amount": "36000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-015",
+    "request_id": "PR-015",
+    "invoice_number": "SYN-INV-015",
+    "status": "valid",
+    "amount": "96000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-016",
+    "request_id": "PR-016",
+    "invoice_number": "SYN-INV-016",
+    "status": "valid",
+    "amount": "192000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-017",
+    "request_id": "PR-013",
+    "invoice_number": "SYN-INV-017",
+    "status": "amount_mismatch",
+    "amount": "70000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-10"
+  },
+  {
+    "invoice_id": "INV-018",
+    "request_id": "PR-017",
+    "invoice_number": "SYN-INV-018",
+    "status": "valid",
+    "amount": "54000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-019",
+    "request_id": "PR-018",
+    "invoice_number": "SYN-INV-019",
+    "status": "valid",
+    "amount": "108000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-020",
+    "request_id": "PR-019",
+    "invoice_number": "SYN-INV-020",
+    "status": "valid",
+    "amount": "135000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-021",
+    "request_id": "PR-020",
+    "invoice_number": "SYN-INV-021",
+    "status": "valid",
+    "amount": "270000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-022",
+    "request_id": "PR-021",
+    "invoice_number": "SYN-INV-022",
+    "status": "valid",
+    "amount": "18000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-023",
+    "request_id": "PR-022",
+    "invoice_number": "SYN-INV-023",
+    "status": "valid",
+    "amount": "36000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  },
+  {
+    "invoice_id": "INV-024",
+    "request_id": "PR-023",
+    "invoice_number": "SYN-INV-024",
+    "status": "valid",
+    "amount": "63000.00",
+    "tax_rate": "0.06",
+    "issue_date": "2026-03-15"
+  }
+]

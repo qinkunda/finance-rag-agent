@@ -1,0 +1,57 @@
+[
+  {
+    "request_id": "PR-001",
+    "title": "仓储服务预付款审批",
+    "status": "pending_finance_review",
+    "department_id": "D-SCM",
+    "project_id": "LOG-2026",
+    "amount": "30000.00",
+    "created_by": "U-EMP-003",
+    "created_at": "2026-03-12T09:00:00+08:00"
+  },
+  {
+    "request_id": "PR-002",
+    "title": "到货款缺少验收材料",
+    "status": "needs_supplement",
+    "department_id": "D-SCM",
+    "project_id": "LOG-2026",
+    "amount": "60000.00",
+    "created_by": "U-EMP-003",
+    "requires_finance_manager": true,
+    "created_at": "2026-03-12T09:05:00+08:00",
+    "exception": {
+      "code": "missing_acceptance",
+      "message": "缺少验收单，请补充验收材料"
+    }
+  },
+  {
+    "request_id": "PR-003",
+    "title": "预付款金额与里程碑不一致",
+    "status": "needs_supplement",
+    "department_id": "D-SCM",
+    "project_id": "LOG-2026",
+    "amount": "70000.00",
+    "created_by": "U-EMP-003",
+    "requires_finance_manager": true,
+    "created_at": "2026-03-12T09:10:00+08:00",
+    "exception": {
+      "code": "milestone_amount_mismatch",
+      "message": "申请金额与合同里程碑不一致"
+    }
+  },
+  {
+    "request_id": "PR-007",
+    "title": "供应商账户指纹不一致",
+    "status": "needs_supplement",
+    "department_id": "D-SCM",
+    "project_id": "MFG-2026",
+    "amount": "90000.00",
+    "created_by": "U-EMP-003",
+    "requires_finance_manager": true,
+    "created_at": "2026-03-12T09:15:00+08:00",
+    "exception": {
+      "code": "vendor_account_mismatch",
+      "message": "收款账户与供应商主数据不一致，需独立复核"
+    }
+  }
+]
