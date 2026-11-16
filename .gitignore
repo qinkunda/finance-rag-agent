@@ -13,3 +13,8 @@ biz_rules.db
 
 triples.json
 kg.html
+
+__pycache__/
+*.class
+output/
+.vscode/

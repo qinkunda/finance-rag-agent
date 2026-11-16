@@ -49,9 +49,8 @@ from openai import PermissionDeniedError, RateLimitError
 # 模型优先级列表（按额度/效果排序，可随时调整）
 MODEL_FALLBACK_LIST = [
     "qwen-plus",               # 主力
-    "qwen3.7-plus",            # 新一代旗舰
+    "qwen3.6-plus",            # 新一代稳定版
     "qwen-plus-2025-07-28",    # 主力模型快照
-    "qwen3.6-plus",
     "glm-5",
     "qwen3-32b",
     "qwen3.5-35b-a3b",
@@ -59,6 +58,7 @@ MODEL_FALLBACK_LIST = [
     "qwen3.6-flash",           # 快而便宜，质量略降
     "qwen3.7-flash-2026-07-15",
     "qwen-long",               # 兜底
+    "qwen3.7-plus",            # 存在过度拒答问题，仅作最后备用
 ]
 
 
@@ -240,7 +240,7 @@ def build_access_filter(user_role: str) -> dict:
 # ==========================================
 # 8. 🆕 Rerank 精排函数
 # ==========================================
-def rerank_docs(query: str, docs: list, top_n: int = 5) -> list:
+def rerank_docs(query: str, docs: list, top_n: int = 12) -> list:
     """对粗排召回的文档进行交叉编码器精排"""
     if not docs:
         return []
@@ -386,7 +386,7 @@ def rag_query(question: str) -> dict:
     raw_docs = retriever.invoke(question)
 
     # 使用 Rerank 模型对粗排的 15 条进行精排，只保留最相关的 Top 5
-    docs = rerank_docs(question, raw_docs, top_n=5)
+    docs = rerank_docs(question, raw_docs, top_n=12)
 
     contexts = [doc.page_content for doc in docs]
 
@@ -432,7 +432,7 @@ def ask(question: str, user_role: str = "employee") -> dict:
     with QueryTimer() as t:
         # ---- Step 3: 带权限过滤的检索 + Rerank 精排 ----
         raw_docs = filtered_retriever.invoke(question)
-        docs = rerank_docs(question, raw_docs, top_n=5)
+        docs = rerank_docs(question, raw_docs, top_n=12)
 
         chunks_meta = [
             {
