@@ -78,6 +78,20 @@ def _safe_draft_answer(action: dict) -> str:
     return "已生成只读预填草稿，请在业务办理页面核对并确认。"
 
 
+def _safe_policy_answer(citations: list[dict]) -> str:
+    excerpts = []
+    for citation in citations[:2]:
+        text = citation.get("text", "").split("\n", 1)[-1]
+        excerpts.append(f"{text}（来源：{citation.get('title')} {citation.get('version')}，{citation.get('chunk_id')}）")
+    return "依据当前生效的工具检索条款：\n" + "\n".join(excerpts)
+
+
+_TOOL_REQUIRED_TERMS = (
+    "财务", "报销", "差旅", "住宿", "付款", "合同", "预算", "对账", "发票",
+    "税率", "质保金", "验收单", "供应商", "成本", "费用", "制度", "限额",
+)
+
+
 class FinanceAgent:
     def __init__(self, root: Path, db_path: Path | None = None, llm=None):
         self.root = root
@@ -189,26 +203,44 @@ class FinanceAgent:
         else:
             final = "已调用多个工具但仍未形成结论，请把问题拆小或补充条件后再试。"
 
-        validation = validate_answer_numbers(final, evidence)
+        if not tools_used and any(term in question for term in _TOOL_REQUIRED_TERMS):
+            self.audit.record(
+                request_id=request_id, session_id=session_id, identity=identity, question=question,
+                tool_name="assistant_final", arguments={"tools_used": []},
+                result={"status": "fallback_no_tool", "model_answer": final}, status="fallback_no_tool",
+                model_name=model_name, execution_mode=execution_mode,
+            )
+            emit("fallback", message="模型未调用必要工具，已切换确定性业务服务")
+            return None
+
+        original_final = final
+        context_texts = [question] + [m.get("content") or "" for m in prior]
+        validation = validate_answer_numbers(final, evidence, context_texts=context_texts)
         status = "completed" if validation.valid else "guard_blocked"
         if not validation.valid:
             if pending_action:
                 final = ("数字校验守卫已拦截模型回答中的未核验数字；以下改为工具直接生成的安全说明：\n"
                          + _safe_draft_answer(pending_action))
+            elif citations:
+                final = ("数字校验守卫已拦截模型回答中的未核验数字；以下改为检索条款原文：\n"
+                         + _safe_policy_answer(citations))
             else:
                 final = ("数字校验守卫已拦截这次回答：模型给出了无法由工具结果核验的数字 "
                          + "、".join(validation.missing)
                          + "。这些数字未作为事实返回。请重新提问或缩小分析范围。")
             trace.append({"step": "numeric_guard", "status": "blocked", "missing": list(validation.missing),
-                          "deterministic_draft_fallback": bool(pending_action)})
+                          "deterministic_draft_fallback": bool(pending_action),
+                          "deterministic_policy_fallback": bool(citations)})
             emit("guard_blocked", message="终稿数字校验未通过，已拦截", missing=list(validation.missing))
         else:
             trace.append({"step": "numeric_guard", "status": "passed", "checked": list(validation.checked)})
         self.audit.record(
             request_id=request_id, session_id=session_id, identity=identity, question=question,
             tool_name="assistant_final", arguments={"tools_used": tools_used},
-            result={"status": status, "numeric_guard": validation.valid}, status=status,
-            model_name=model_name, execution_mode=execution_mode,
+            result={"status": status, "numeric_guard": validation.valid,
+                    "missing": list(validation.missing),
+                    "rejected_answer": original_final if not validation.valid else None},
+            status=status, model_name=model_name, execution_mode=execution_mode,
         )
         with self._lock:
             history = self._histories.setdefault(session_id, [])

@@ -80,6 +80,30 @@ class GuardAuditTest(unittest.TestCase):
         self.assertIn("910.00", guarded["answer"])
         self.assertNotIn("1000", guarded["answer"])
 
+    def test_policy_guard_falls_back_to_real_clause_and_audits_rejected_answer(self):
+        llm = MockLLM([
+            tool_call("search_policy", {"query": "没有验收单可以付款吗"}),
+            final("根据第 4.2 条，没有验收单也可以直接付款。"),
+        ])
+        sid = self.session("U-EMP-001")
+        result = FinanceAgent(ROOT, self.db, llm=llm).try_handle("没有验收单可以直接付款吗", sid)
+        self.assertEqual(result["status"], "guard_blocked")
+        self.assertIn("到货款支付前必须取得验收单", result["answer"])
+        self.assertIn("4.2", result["data"]["numeric_guard"]["missing"])
+        final_audit = next(event for event in AgentAuditTrail(self.db).list_events()
+                           if event["tool_name"] == "assistant_final")
+        self.assertIn("4.2", final_audit["result_summary"])
+        self.assertIn("没有验收单也可以直接付款", final_audit["result_summary"])
+
+    def test_finance_answer_without_tool_falls_back_to_offline_service(self):
+        llm = MockLLM([final("请先调用 search_policy 查询制度条款。")])
+        sid = self.session("U-EMP-001")
+        result = FinanceAgent(ROOT, self.db, llm=llm).try_handle("没有验收单可以直接付款吗", sid)
+        self.assertIsNone(result)
+        final_audit = next(event for event in AgentAuditTrail(self.db).list_events()
+                           if event["tool_name"] == "assistant_final")
+        self.assertEqual(final_audit["status"], "fallback_no_tool")
+
     def test_vector_failure_returns_explicit_lexical_fallback(self):
         search = PolicySearch(ROOT, self.db)
         search.mode = "vector"

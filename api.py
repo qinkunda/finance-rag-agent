@@ -27,6 +27,14 @@ from finance_platform.vector_rag import vector_status
 from finance_platform.workflow import WorkflowConflictError, WorkflowService
 
 ROOT = Path(__file__).resolve().parent
+
+# 项目级 .env 优先于进程环境：无论谁用什么方式启动服务，LLM 配置都在（.env 已被 .gitignore 忽略）
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
+
 STATIC_INDEX = ROOT / "static" / "index.html"
 app = FastAPI(title="星汉财务统一智能平台（合成演示）", version="0.4.0")
 

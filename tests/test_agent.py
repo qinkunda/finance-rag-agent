@@ -88,19 +88,17 @@ class FinanceAgentTest(unittest.TestCase):
         self.assertIn("预算执行率", tool_msgs[0]["content"])
         self.assertIn("共 8 个预算项目", tool_msgs[0]["content"])
 
-    # 2) 权限拦截下沉在工具层：员工问预算 → 工具返回权限错误 → 智能体如实解释
+    # 2) 权限拦截下沉在工具层：员工问预算 → 工具返回权限错误 → 无可用数据时交回确定性服务（返回 None）
     def test_permission_enforced_inside_loop(self):
         agent, llm = self.make_agent([
             tool_call("analyze_budget", {"metric": "execution"}),
-            final("抱歉，你没有跨部门预算分析权限；请通过工作总览查看本人事项，或联系财务。"),
+            final("抱歉，你没有跨部门预算分析权限。"),
         ])
         sid = self.session("U-EMP-001")
         result = agent.try_handle("分析各部门预算执行情况", sid)
-        self.assertEqual(result["status"], "completed")
-        self.assertIn("权限", result["answer"])
+        self.assertIsNone(result)  # 新设计：无工具成功调用时回退确定性服务（最终由规则引擎抛 403）
         tool_msgs = [m for m in llm.calls[1] if m["role"] == "tool"]
         self.assertTrue(tool_msgs[0]["content"].startswith("权限不足"))
-        self.assertNotIn("chart", result["data"])  # 无权限则不产生图表数据
 
     # 3) 制度检索：search_policy 返回条款引用
     def test_policy_search_with_citations(self):
@@ -178,6 +176,59 @@ class FinanceAgentTest(unittest.TestCase):
         report = result["data"].get("report_html", "")
         for kw in ["指标口径", "管理摘要", "数据明细", "合成", "原始问题"]:
             self.assertIn(kw, report)
+
+
+class ModelFallbackTest(unittest.TestCase):
+    """模型降级链：主模型不可用（quota 类）自动降下一档；不可恢复错误直接抛。"""
+
+    def _make(self, outcomes: dict[str, Exception | dict]):
+        from finance_platform.agent.llm import OpenAICompatibleLLM
+        llm = OpenAICompatibleLLM(api_key="test", model="model-a",
+                                  fallback_models=["model-b", "model-c"])
+        calls: list[str] = []
+
+        def fake_once(messages, tools, temperature):
+            calls.append(llm.model)
+            outcome = outcomes[llm.model]
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+        llm._chat_once = fake_once  # type: ignore[assignment]
+        return llm, calls
+
+    def test_fallback_to_second_model(self):
+        from finance_platform.agent.llm import LLMError
+        llm, calls = self._make({
+            "model-a": LLMError("AllocationQuota.FreeTierOnly quota exhausted"),
+            "model-b": {"content": "ok", "tool_calls": []},
+        })
+        result = llm.chat([{"role": "user", "content": "hi"}])
+        self.assertEqual(result["content"], "ok")
+        self.assertEqual(result["actual_model"], "model-b")
+        self.assertEqual(result["fallback_from"], "model-a")
+        self.assertEqual(llm.model, "model-b")  # 后续轮次固定用降级后的模型
+        self.assertIn("model-a", llm.last_error)
+
+    def test_non_recoverable_error_no_fallback(self):
+        from finance_platform.agent.llm import LLMError
+        llm, calls = self._make({"model-a": LLMError("401 Unauthorized Invalid API-key")})
+        with self.assertRaises(LLMError):
+            llm.chat([{"role": "user", "content": "hi"}])
+        self.assertEqual(calls, ["model-a"])  # 鉴权失败不浪费降级尝试
+
+    def test_fallback_chain_exhausted(self):
+        from finance_platform.agent.llm import LLMError
+        llm, calls = self._make({m: LLMError("quota exhausted") for m in ["model-a", "model-b", "model-c"]})
+        with self.assertRaises(LLMError):
+            llm.chat([{"role": "user", "content": "hi"}])
+        self.assertEqual(calls, ["model-a", "model-b", "model-c"])
+
+    def test_chain_dedup(self):
+        from finance_platform.agent.llm import OpenAICompatibleLLM
+        llm = OpenAICompatibleLLM(api_key="t", model="qwen-x",
+                                  fallback_models=["qwen-x", "qwen-y", "qwen-y"])
+        self.assertEqual(llm.fallback_models, ["qwen-y"])
 
 
 if __name__ == "__main__":

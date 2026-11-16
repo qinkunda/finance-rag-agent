@@ -7,27 +7,52 @@ import httpx
 
 from ..llm_routing import model_for_question
 
+# 内置兜底链：主模型不可用（免费额度用尽/未开启/限流）时按顺序降级。
+# 速度优先：主力 qwen-flash（快）；qwen3.7-max 作出错兜底；思维模型（qwen4-max）响应慢且易漏思维残渣，不进链。
+DEFAULT_FALLBACK_MODELS = ["qwen3.7-max-2026-06-08", "qwen-flash"]
+
 
 class LLMError(RuntimeError):
     pass
 
 
 class OpenAICompatibleLLM:
+    """OpenAI 兼容客户端，支持按问题路由（for_question）与多档模型降级链。
+
+    降级触发条件（recoverable）：模型不存在 / 免费额度用尽 / quota 类错误。
+    鉴权失败等不可恢复错误直接抛出，不浪费降级尝试。
+    """
+
     def __init__(self, base_url: str | None = None, api_key: str | None = None,
                  model: str | None = None, timeout: float = 60.0,
-                 fallback_model: str | None = None):
+                 fallback_model: str | None = None,
+                 fallback_models: list[str] | None = None):
         env = os.getenv
         self.base_url = (base_url or env("FINANCE_LLM_BASE_URL") or env("DASHSCOPE_BASE_URL")
                          or "https://dashscope.aliyuncs.com/compatible-mode/v1").rstrip("/")
         self.api_key = api_key or env("FINANCE_LLM_API_KEY") or env("DASHSCOPE_API_KEY") or ""
         self.model = model or env("FINANCE_LLM_MODEL") or "qwen-plus"
-        self.fallback_model = fallback_model if fallback_model is not None else env("FINANCE_LLM_FALLBACK_MODEL", "qwen-flash")
         self.timeout = timeout
+        self.last_error = ""
+
+        if fallback_models is not None:
+            chain = list(fallback_models)
+        else:
+            chain = []
+            # 兼容旧参数：单档 fallback_model
+            legacy = fallback_model if fallback_model is not None else env("FINANCE_LLM_FALLBACK_MODEL", "")
+            if legacy:
+                chain.append(legacy)
+            # 环境变量可追加自定义降级档（逗号分隔）
+            chain.extend(s.strip() for s in env("FINANCE_LLM_FALLBACK_MODELS", "").split(",") if s.strip())
+            # 内置兜底链
+            chain.extend(DEFAULT_FALLBACK_MODELS)
+        self.fallback_models = [m for m in dict.fromkeys(chain) if m and m != self.model]
 
     def for_question(self, question: str):
         return OpenAICompatibleLLM(
             base_url=self.base_url, api_key=self.api_key, model=model_for_question(question),
-            timeout=self.timeout, fallback_model=self.fallback_model,
+            timeout=self.timeout, fallback_models=list(self.fallback_models),
         )
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None,
@@ -36,19 +61,26 @@ class OpenAICompatibleLLM:
             return self._chat_once(messages, tools, temperature)
         except LLMError as exc:
             message = str(exc)
-            recoverable = "model_not_found" in message or "Model not exist" in message or "quota" in message.lower()
-            if not self.fallback_model or self.fallback_model == self.model or not recoverable:
+            recoverable = ("model_not_found" in message or "Model not exist" in message
+                           or "quota" in message.lower())
+            if not recoverable or not self.fallback_models:
                 raise
-            fallback = OpenAICompatibleLLM(
-                base_url=self.base_url, api_key=self.api_key, model=self.fallback_model,
-                timeout=self.timeout, fallback_model="",
-            )
-            result = fallback.chat(messages, tools, temperature)
-            result["actual_model"] = self.fallback_model
-            result["fallback_from"] = self.model
-            self.model = self.fallback_model
-            self.fallback_model = ""
-            return result
+            from_model = self.model
+            last_exc: LLMError = exc
+            for candidate in list(self.fallback_models):
+                self.model = candidate
+                try:
+                    result = self._chat_once(messages, tools, temperature)
+                except LLMError as sub_exc:
+                    self.last_error = f"{candidate}: {sub_exc}"
+                    last_exc = sub_exc
+                    continue
+                result["actual_model"] = candidate
+                result["fallback_from"] = from_model
+                self.last_error = f"{from_model}: {exc}"
+                self.fallback_models = []
+                return result
+            raise last_exc
 
     def _chat_once(self, messages: list[dict], tools: list[dict] | None,
                    temperature: float) -> dict[str, Any]:

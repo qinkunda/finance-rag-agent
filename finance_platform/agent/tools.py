@@ -219,11 +219,14 @@ def _search_policy(args: dict, ctx: ToolContext) -> ToolResult:
     answer = PolicySearch(ctx.root, ctx.db_path).answer(query, user_role=role)
     if answer.get("blocked"):
         return ToolResult(answer["answer"], is_error=True)
-    citations = "；".join(
+    citation_text = "；".join(
         f"{c.get('document_id', '')}《{c.get('title', '')}》{c.get('version', '')}"
         for c in answer.get("citations") or []) or "无"
-    return ToolResult(f"制度检索结果：\n{answer['answer']}\n引用条款：{citations}",
-                      citations=answer.get("citations") or [])
+    citation_items = []
+    for citation, context in zip(answer.get("citations") or [], answer.get("contexts") or []):
+        citation_items.append({**citation, "text": context})
+    return ToolResult(f"制度检索结果：\n{answer['answer']}\n引用条款：{citation_text}",
+                      citations=citation_items)
 
 
 def _prepare_expense(args: dict, ctx: ToolContext) -> ToolResult:
