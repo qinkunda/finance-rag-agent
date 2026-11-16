@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import tempfile
 import unittest
 import uuid
@@ -202,6 +203,13 @@ class EnterprisePlatformTest(unittest.TestCase):
         self.assertIn("missing_acceptance", [x["code"] for x in owner["data"]["findings"]])
         with self.assertRaises(PermissionError):
             platform.handle_enterprise("请预检付款申请 PR-002", self.session("U-EMP-001"))
+
+    def test_13_connection_context_closes_database(self):
+        conn = connect(self.db)
+        with conn:
+            self.assertEqual(conn.execute("SELECT 1").fetchone()[0], 1)
+        with self.assertRaises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
 
 
 if __name__ == "__main__":

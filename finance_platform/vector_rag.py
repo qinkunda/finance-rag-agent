@@ -47,6 +47,17 @@ class VectorKnowledgeBase:
         self._store = None
         self._reranker = None
 
+    def close(self) -> None:
+        store, self._store = self._store, None
+        if store is not None:
+            store._client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def _embedding(self):
         if self.embeddings is None:
             self.embeddings = dashscope_embeddings()
@@ -72,6 +83,8 @@ class VectorKnowledgeBase:
         return documents
 
     def build(self, rebuild: bool = False) -> dict[str, Any]:
+        if rebuild:
+            self.close()
         if rebuild and self.persist_dir.exists():
             shutil.rmtree(self.persist_dir)
         self.persist_dir.parent.mkdir(parents=True, exist_ok=True)

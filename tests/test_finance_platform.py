@@ -176,20 +176,20 @@ class FinancePlatformTest(unittest.TestCase):
         from langchain_community.embeddings import FakeEmbeddings
 
         with tempfile.TemporaryDirectory() as tmp:
-            knowledge = VectorKnowledgeBase(
+            with VectorKnowledgeBase(
                 ROOT, Path(tmp) / "chroma", embeddings=FakeEmbeddings(size=32),
                 reranker_path=Path(tmp) / "no-reranker",
-            )
-            result = knowledge.build()
-            self.assertEqual(result["vector_count"], 101)
-            self.assertEqual(knowledge.count(), 101)
-            public_hits = knowledge.search("付款制度", {"public"}, top_k=10)
-            self.assertTrue(public_hits)
-            self.assertTrue(all(hit["access_level"] == "public" for hit in public_hits))
-            self.assertTrue(all(hit["status"] == "active" for hit in public_hits))
-            confidential_hits = knowledge.search("报销", {"confidential"}, top_k=10)
-            self.assertTrue(confidential_hits)
-            self.assertTrue(all(hit["access_level"] == "confidential" for hit in confidential_hits))
+            ) as knowledge:
+                result = knowledge.build()
+                self.assertEqual(result["vector_count"], 101)
+                self.assertEqual(knowledge.count(), 101)
+                public_hits = knowledge.search("付款制度", {"public"}, top_k=10)
+                self.assertTrue(public_hits)
+                self.assertTrue(all(hit["access_level"] == "public" for hit in public_hits))
+                self.assertTrue(all(hit["status"] == "active" for hit in public_hits))
+                confidential_hits = knowledge.search("报销", {"confidential"}, top_k=10)
+                self.assertTrue(confidential_hits)
+                self.assertTrue(all(hit["access_level"] == "confidential" for hit in confidential_hits))
 
 
 if __name__ == "__main__":
